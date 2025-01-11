@@ -42,6 +42,7 @@ page_patterns = [
     ("image",                re_compile(r"@IMAGE\s*(B)?\(([\w,]+)\)(?:: (.*))?"),           lambda match: (match.group(3), {"images": [modpfx + imagepath.format(fn) for fn in match.group(2).split(",")], "border": bool(match.group(1))})),
     ("link",                 re_compile(r"@URL\s*\(([^)]+)\)\s*([^:]+)\s*(?:: (.*))?"),     lambda match: (match.group(3), {"url": match.group(1), "link_text": match.group(2)})),
     ("relations",            re_compile(r"@LIST\s*\((?:([\w/]+):)?([\w,/#]+)\)\s*([^:]+)\s*(?:: (.*))?"), lambda match: (match.group(4), {"entries": [(match.group(1) or "") + it for it in match.group(2).split(",")], "title": match.group(3)})),
+    ("text",                 re_compile("@TITLE\s*\(([^)]*)\):\s*(.*)"),                    lambda match: (match.group(2), {"title": match.group(1)})),
     ("text",                 re_compile(".*"),                          lambda match: (match.group(0), {}))
 ]
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
                     bookpfx = modname + "." + i18pfx
                     i18n = True
                 else: bookpfx = None
-                basepath = "data/" + modname + "/patchouli_books/" + bookid + "/" + lang
+                basepath = "assets/" + modname + "/patchouli_books/" + bookid + "/" + lang
                 makedirs(basepath + "/categories", exist_ok=True)
                 book_json = {
                     "name": langput("name", langname),
@@ -99,7 +100,7 @@ if __name__ == "__main__":
                         k, v = mp.split("->", maxsplit=1)
                         mdata[k] = v
                     book_json["macros"] = mdata
-                with open(basepath + "/../book.json", "w") as book_file:
+                with open("data/" + modname + "/patchouli_books/" + bookid + "/" + "book.json", "w") as book_file:
                     dump_json(book_json, book_file, indent=2)
                 continue
             matcher = section_pat.fullmatch(line)
@@ -131,7 +132,7 @@ if __name__ == "__main__":
                 entry_key = camelcased(name)
                 entry_data = {
                     "name": langput("entry." + entry_key, langname),
-                    "category": section,
+                    "category": modpfx + section,
                     "icon": (modpfx + icon) if icon else "minecraft:air"
                 }
                 if important: entry_data["priority"] = True

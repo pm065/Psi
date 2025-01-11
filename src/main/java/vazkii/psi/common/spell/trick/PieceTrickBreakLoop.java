@@ -8,7 +8,8 @@
  */
 package vazkii.psi.common.spell.trick;
 
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.cad.ISocketable;
@@ -45,20 +46,20 @@ public class PieceTrickBreakLoop extends PieceTrick {
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		double value = this.getParamValue(context, valueParam).doubleValue();
 
-		if (Math.abs(value) < 1.0) {
-			if (context.focalPoint != context.caster) {
-				if (context.focalPoint instanceof EntitySpellCircle) {
+		if(Math.abs(value) < 1.0) {
+			if(context.focalPoint != context.caster) {
+				if(context.focalPoint instanceof EntitySpellCircle) {
 					EntitySpellCircle circle = (EntitySpellCircle) context.focalPoint;
-					CompoundNBT circleNBT = new CompoundNBT();
-					circle.writeAdditional(circleNBT);
+					CompoundTag circleNBT = new CompoundTag();
+					circle.addAdditionalSaveData(circleNBT);
 					circleNBT.putInt("timesCast", 20);
 					circleNBT.putInt("timesAlive", 100);
-					circle.read(circleNBT);
+					circle.load(circleNBT);
 				} else {
-					context.focalPoint.remove();
+					context.focalPoint.remove(Entity.RemovalReason.DISCARDED);
 				}
 			} else {
-				if (!context.tool.isEmpty() && context.tool.getCapability(PsiAPI.SOCKETABLE_CAPABILITY).isPresent()) {
+				if(!context.tool.isEmpty() && context.tool.getCapability(PsiAPI.SOCKETABLE_CAPABILITY).isPresent()) {
 					ISocketable socketableCap = context.tool.getCapability(PsiAPI.SOCKETABLE_CAPABILITY).orElseThrow(NullPointerException::new);
 					socketableCap.setSelectedSlot(socketableCap.getLastSlot() + 1);
 				}

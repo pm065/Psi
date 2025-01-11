@@ -8,7 +8,7 @@
  */
 package vazkii.psi.api.spell;
 
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.network.chat.Component;
 
 public class StatLabel {
 	private StringBuilder tooltip;
@@ -82,7 +82,7 @@ public class StatLabel {
 	}
 
 	public StatLabel times() {
-		if (order < 2) {
+		if(order < 2) {
 			parenthesize();
 		}
 		order = 2;
@@ -106,7 +106,7 @@ public class StatLabel {
 	}
 
 	public StatLabel div() {
-		if (order < 2) {
+		if(order < 2) {
 			parenthesize();
 		}
 		order = 2;
@@ -130,69 +130,69 @@ public class StatLabel {
 	}
 
 	public StatLabel floor() {
-		return prepend('⌊').append('⌋');
+		return prepend("⌊").append("⌋");
 	}
 
 	public StatLabel ceil() {
-		return prepend('⌈').append('⌉');
+		return prepend("⌈").append("⌉");
 	}
 
 	public StatLabel round() {
-		return prepend('⌊').append('⌉');
+		return prepend("⌊").append("⌉");
 	}
 
 	public StatLabel min(double value) {
-		return prepend("min(").append(", ").append(formatDouble(value)).append(')');
+		return prepend("min(").append(", ").append(formatDouble(value)).append(")");
 	}
 
 	public StatLabel min(StatLabel other) {
-		prepend("min(").append(", ").append(other).append(')');
+		prepend("min(").append(", ").append(other).append(")");
 		return this;
 	}
 
 	public StatLabel max(double value) {
-		return prepend("max(").append(", ").append(formatDouble(value)).append(')');
+		return prepend("max(").append(", ").append(formatDouble(value)).append(")");
 	}
 
 	public StatLabel max(StatLabel other) {
-		return prepend("max(").append(", ").append(other).append(')');
+		return prepend("max(").append(", ").append(other).append(")");
 	}
 
 	public StatLabel abs() {
-		return prepend('|').append('|');
+		return prepend("|").append("|");
 	}
 
 	public StatLabel parenthesize() {
 		order = 3;
-		return prepend('(').append(')');
+		return prepend("(").append(")");
 	}
 
 	public StatLabel square() {
-		return append('²');
+		return append("²");
 	}
 
 	public StatLabel cube() {
-		return append('³');
+		return append("³");
 	}
 
 	public StatLabel pow(String str, boolean translate) {
-		return append("^(").append(translate ? translate(str) : str).append(')');
+		return append("^(").append(translate ? translate(str) : str).append(")");
 	}
 
 	public StatLabel pow(String str) {
-		return append("^(").append(str).append(')');
+		return append("^(").append(str).append(")");
 	}
 
 	public StatLabel pow(StatLabel other) {
-		return append("^(").append(other).append(')');
+		return append("^(").append(other).append(")");
 	}
 
 	public StatLabel pow(double value) {
-		return append("^(").append(formatDouble(value)).append(')');
+		return append("^(").append(formatDouble(value)).append(")");
 	}
 
 	public StatLabel sqrt() {
-		return parenthesize().prepend('√');
+		return parenthesize().prepend("√");
 	}
 
 	public StatLabel prepend(String str) {
@@ -242,12 +242,12 @@ public class StatLabel {
 	}
 
 	private String translate(String str) {
-		return new TranslationTextComponent(str).getString();
+		return Component.translatable(str).getString();
 	}
 
 	private String formatDouble(double value) {
 		String s = String.valueOf(value);
-		if (s.endsWith(".0")) {
+		if(s.endsWith(".0")) {
 			s = s.substring(0, s.length() - 2);
 		}
 		return s;

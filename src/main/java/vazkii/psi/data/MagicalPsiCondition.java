@@ -10,7 +10,7 @@ package vazkii.psi.data;
 
 import com.google.gson.JsonObject;
 
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.crafting.conditions.ICondition;
 import net.minecraftforge.common.crafting.conditions.IConditionSerializer;
 
@@ -27,7 +27,7 @@ public class MagicalPsiCondition implements ICondition {
 	}
 
 	@Override
-	public boolean test() {
+	public boolean test(IContext context) {
 		return Psi.magical;
 	}
 

@@ -10,26 +10,26 @@ package vazkii.psi.common.item.armor;
 
 import com.google.common.collect.Multimap;
 
-import net.minecraft.client.renderer.entity.model.BipedModel;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.attributes.Attribute;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.IArmorMaterial;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.LazyValue;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.fml.DistExecutor;
+
+import org.jetbrains.annotations.NotNull;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.cad.ICADColorizer;
@@ -38,7 +38,7 @@ import vazkii.psi.api.exosuit.IPsiEventArmor;
 import vazkii.psi.api.exosuit.PsiArmorEvent;
 import vazkii.psi.api.internal.TooltipHelper;
 import vazkii.psi.api.spell.SpellContext;
-import vazkii.psi.client.model.ModelPsimetalExosuit;
+import vazkii.psi.client.model.ArmorModels;
 import vazkii.psi.common.core.handler.PlayerDataHandler;
 import vazkii.psi.common.core.handler.PlayerDataHandler.PlayerData;
 import vazkii.psi.common.item.ItemCAD;
@@ -50,37 +50,38 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiEventArmor {
 
-	public final EquipmentSlotType type;
-	private final LazyValue<BipedModel<?>> model;
+	public final EquipmentSlot type;
+	//private final LazyLoadedValue<HumanoidModel<?>> model;
 
 	private static final String TAG_TIMES_CAST = "timesCast";
 
-	public ItemPsimetalArmor(EquipmentSlotType type, Properties props) {
+	public ItemPsimetalArmor(EquipmentSlot type, Properties props) {
 		this(type, PsiAPI.PSIMETAL_ARMOR_MATERIAL, props);
 	}
 
-	public ItemPsimetalArmor(EquipmentSlotType type, IArmorMaterial mat, Properties props) {
+	public ItemPsimetalArmor(EquipmentSlot type, ArmorMaterial mat, Properties props) {
 		super(mat, type, props);
 		this.type = type;
-		this.model = DistExecutor.runForDist(() -> () -> new LazyValue<>(() -> this.provideArmorModelForSlot(type)),
-				() -> () -> null);
+		/*this.model = DistExecutor.runForDist(() -> () -> new LazyLoadedValue<>(() -> this.provideArmorModelForSlot(type)),
+				() -> () -> null);*/
 	}
 
 	@Override
 	public void setDamage(ItemStack stack, int damage) {
-		if (damage > stack.getMaxDamage()) {
-			damage = stack.getDamage();
+		if(damage > stack.getMaxDamage()) {
+			damage = stack.getDamageValue();
 		}
 		super.setDamage(stack, damage);
 	}
 
 	@Override
-	public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlotType slot, ItemStack stack) {
+	public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlot slot, ItemStack stack) {
 		Multimap<Attribute, AttributeModifier> modifiers = super.getAttributeModifiers(slot, stack);
-		if (!isEnabled(stack)) {
+		if(!isEnabled(stack)) {
 			modifiers.removeAll(Attributes.ARMOR);
 			modifiers.removeAll(Attributes.ARMOR_TOUGHNESS);
 		}
@@ -90,34 +91,34 @@ public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiE
 
 	@Nonnull
 	@Override
-	public String getTranslationKey(ItemStack stack) {
-		String name = super.getTranslationKey(stack);
-		if (!isEnabled(stack)) {
+	public String getDescriptionId(ItemStack stack) {
+		String name = super.getDescriptionId(stack);
+		if(!isEnabled(stack)) {
 			name += ".broken";
 		}
 		return name;
 	}
 
 	@Override
-	public void inventoryTick(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
+	public void inventoryTick(ItemStack stack, Level worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
 		IPsimetalTool.regen(stack, entityIn);
 	}
 
 	@Nullable
 	@Override
-	public ICapabilityProvider initCapabilities(ItemStack stack, @Nullable CompoundNBT nbt) {
+	public ICapabilityProvider initCapabilities(ItemStack stack, @Nullable CompoundTag nbt) {
 		return new ArmorSocketable(stack, 3);
 	}
 
 	public void cast(ItemStack stack, PsiArmorEvent event) {
-		PlayerData data = PlayerDataHandler.get(event.getPlayer());
-		ItemStack playerCad = PsiAPI.getPlayerCAD(event.getPlayer());
+		PlayerData data = PlayerDataHandler.get(event.getEntity());
+		ItemStack playerCad = PsiAPI.getPlayerCAD(event.getEntity());
 
-		if (isEnabled(stack) && !playerCad.isEmpty()) {
+		if(isEnabled(stack) && !playerCad.isEmpty()) {
 			int timesCast = stack.getOrCreateTag().getInt(TAG_TIMES_CAST);
 
 			ItemStack bullet = ISocketable.socketable(stack).getSelectedBullet();
-			ItemCAD.cast(event.getPlayer().getEntityWorld(), event.getPlayer(), data, bullet, playerCad, getCastCooldown(stack), 0, getCastVolume(), (SpellContext context) -> {
+			ItemCAD.cast(event.getEntity().getCommandSenderWorld(), event.getEntity(), data, bullet, playerCad, getCastCooldown(stack), 0, getCastVolume(), (SpellContext context) -> {
 				context.tool = stack;
 				context.attackingEntity = event.attacker;
 				context.damageTaken = event.damage;
@@ -130,7 +131,7 @@ public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiE
 
 	@Override
 	public void onEvent(ItemStack stack, PsiArmorEvent event) {
-		if (event.type.equals(getTrueEvent(stack)) && event.getPlayer() != null) {
+		if(event.type.equals(getTrueEvent(stack)) && event.getEntity() != null) {
 			cast(stack, event);
 		}
 	}
@@ -153,11 +154,11 @@ public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiE
 
 	@OnlyIn(Dist.CLIENT)
 	@Override
-	public void addInformation(ItemStack stack, @Nullable World playerIn, List<ITextComponent> tooltip, ITooltipFlag advanced) {
+	public void appendHoverText(ItemStack stack, @Nullable Level playerIn, List<Component> tooltip, TooltipFlag advanced) {
 		TooltipHelper.tooltipIfShift(tooltip, () -> {
-			ITextComponent componentName = ISocketable.getSocketedItemName(stack, "psimisc.none");
-			tooltip.add(new TranslationTextComponent("psimisc.spell_selected", componentName));
-			tooltip.add(new TranslationTextComponent(getTrueEvent(stack)));
+			Component componentName = ISocketable.getSocketedItemName(stack, "psimisc.none");
+			tooltip.add(Component.translatable("psimisc.spell_selected", componentName));
+			tooltip.add(Component.translatable(getTrueEvent(stack)));
 		});
 	}
 
@@ -167,11 +168,11 @@ public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiE
 	}
 
 	@Override
-	public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlotType slot, String type) {
+	public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
 		return LibResources.MODEL_PSIMETAL_EXOSUIT;
 	}
 
-	public boolean hasColor(@Nonnull ItemStack stack) {
+	public boolean hasCustomColor(@Nonnull ItemStack stack) {
 		return true;
 	}
 
@@ -179,17 +180,17 @@ public class ItemPsimetalArmor extends ArmorItem implements IPsimetalTool, IPsiE
 		return ICADColorizer.DEFAULT_SPELL_COLOR;
 	}
 
-	@Nullable
-	@Override
-	@OnlyIn(Dist.CLIENT)
-	@SuppressWarnings("unchecked")
-	public <A extends BipedModel<?>> A getArmorModel(LivingEntity entityLiving, ItemStack itemStack, EquipmentSlotType armorSlot, A _default) {
-		return (A) model.getValue();
+	public void setColor(ItemStack stack, int color) {
 	}
 
-	@OnlyIn(Dist.CLIENT)
-	public BipedModel<?> provideArmorModelForSlot(EquipmentSlotType slot) {
-		return new ModelPsimetalExosuit(slot);
+	@Override
+	public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+		consumer.accept(new IClientItemExtensions() {
+			@Override
+			public @NotNull HumanoidModel<?> getHumanoidArmorModel(LivingEntity livingEntity, ItemStack itemStack, EquipmentSlot equipmentSlot, HumanoidModel<?> original) {
+				return ArmorModels.get(itemStack);
+			}
+		});
 	}
 
 	public static class ArmorSocketable extends ToolSocketable {

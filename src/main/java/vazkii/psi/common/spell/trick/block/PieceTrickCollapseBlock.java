@@ -8,13 +8,13 @@
  */
 package vazkii.psi.common.spell.trick.block;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.item.FallingBlockEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.event.level.BlockEvent;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.*;
@@ -49,35 +49,34 @@ public class PieceTrickCollapseBlock extends PieceTrick {
 		ItemStack tool = context.getHarvestTool();
 		Vector3 positionVal = this.getParamValue(context, position);
 
-		if (positionVal == null) {
+		if(positionVal == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_VECTOR);
 		}
-		if (!context.isInRadius(positionVal)) {
+		if(!context.isInRadius(positionVal)) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
-		World world = context.focalPoint.getEntityWorld();
+		Level world = context.focalPoint.getCommandSenderWorld();
 		BlockPos pos = positionVal.toBlockPos();
-		BlockPos posDown = pos.down();
+		BlockPos posDown = pos.below();
 		BlockState state = world.getBlockState(pos);
 		BlockState stateDown = world.getBlockState(posDown);
 
-		if (!world.isBlockModifiable(context.caster, pos)) {
+		if(!world.mayInteract(context.caster, pos)) {
 			return null;
 		}
 
-		if (stateDown.isAir(world, posDown) && state.getBlockHardness(world, pos) != -1 &&
+		if(stateDown.isAir() && state.getDestroySpeed(world, pos) != -1 &&
 				PieceTrickBreakBlock.canHarvestBlock(state, context.caster, world, pos, tool) &&
-				world.getTileEntity(pos) == null) {
+				world.getBlockEntity(pos) == null) {
 
 			BlockEvent.BreakEvent event = PieceTrickBreakBlock.createBreakEvent(state, context.caster, world, pos, tool);
 			MinecraftForge.EVENT_BUS.post(event);
-			if (event.isCanceled()) {
+			if(event.isCanceled()) {
 				return null;
 			}
 
-			FallingBlockEntity falling = new FallingBlockEntity(world, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, state);
-			world.addEntity(falling);
+			FallingBlockEntity.fall(world, pos, state);
 		}
 		return null;
 	}

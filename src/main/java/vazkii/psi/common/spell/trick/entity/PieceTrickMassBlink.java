@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.spell.EnumSpellStat;
 import vazkii.psi.api.spell.Spell;
@@ -44,7 +44,7 @@ public class PieceTrickMassBlink extends PieceTrick {
 	public void addToMetadata(SpellMetadata meta) throws SpellCompilationException {
 		super.addToMetadata(meta);
 		Double distanceVal = this.<Double>getParamEvaluation(distance);
-		if (distanceVal == null) {
+		if(distanceVal == null) {
 			distanceVal = 1D;
 		}
 
@@ -57,7 +57,7 @@ public class PieceTrickMassBlink extends PieceTrick {
 		EntityListWrapper targetVal = this.getParamValue(context, target);
 		double distanceVal = this.getParamValue(context, distance).doubleValue();
 
-		for (Entity e : targetVal) {
+		for(Entity e : targetVal) {
 			PieceTrickBlink.blink(context, e, distanceVal);
 		}
 

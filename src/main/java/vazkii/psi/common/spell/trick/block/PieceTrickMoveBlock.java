@@ -8,14 +8,14 @@
  */
 package vazkii.psi.common.spell.trick.block;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.material.PushReaction;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.event.level.BlockEvent;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.EnumSpellStat;
@@ -60,14 +60,14 @@ public class PieceTrickMoveBlock extends PieceTrick {
 		Vector3 positionVal = this.getParamValue(context, position);
 		Vector3 targetVal = this.getParamValue(context, target);
 
-		if (positionVal == null) {
+		if(positionVal == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_VECTOR);
 		}
-		if (!context.isInRadius(positionVal)) {
+		if(!context.isInRadius(positionVal)) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
-		World world = context.focalPoint.getEntityWorld();
+		Level world = context.focalPoint.getCommandSenderWorld();
 		BlockPos pos = positionVal.toBlockPos();
 
 		/**
@@ -78,23 +78,23 @@ public class PieceTrickMoveBlock extends PieceTrick {
 		 * Since there are legitimate use cases besides duping when you want to move a block that is in the same
 		 * position that you previously had broken.
 		 */
-		if (context.positionBroken != null && context.positionBroken.getPos().equals(pos)) {
+		if(context.positionBroken != null && context.positionBroken.getBlockPos().equals(pos)) {
 			return null;
 		}
 		BlockState state = world.getBlockState(pos);
-		if (world.getTileEntity(pos) != null || state.getPushReaction() != PushReaction.NORMAL ||
-				state.getBlockHardness(world, pos) == -1 ||
+		if(world.getBlockEntity(pos) != null || state.getPistonPushReaction() != PushReaction.NORMAL ||
+				state.getDestroySpeed(world, pos) == -1 ||
 				!PieceTrickBreakBlock.canHarvestBlock(state, context.caster, world, pos, tool)) {
 			return null;
 		}
 
 		BlockEvent.BreakEvent event = PieceTrickBreakBlock.createBreakEvent(state, context.caster, world, pos, tool);
 		MinecraftForge.EVENT_BUS.post(event);
-		if (event.isCanceled()) {
+		if(event.isCanceled()) {
 			return null;
 		}
 
-		if (!targetVal.isAxial() || targetVal.isZero()) {
+		if(!targetVal.isAxial() || targetVal.isZero()) {
 			return null;
 		}
 
@@ -105,14 +105,14 @@ public class PieceTrickMoveBlock extends PieceTrick {
 		BlockPos pos1 = new BlockPos(x, y, z);
 		BlockState state1 = world.getBlockState(pos1);
 
-		if (!world.isBlockModifiable(context.caster, pos) || !world.isBlockModifiable(context.caster, pos1)) {
+		if(!world.mayInteract(context.caster, pos) || !world.mayInteract(context.caster, pos1)) {
 			return null;
 		}
 
-		if (state1.isAir(world, pos1) || state1.getMaterial().isReplaceable()) {
-			world.setBlockState(pos1, state, 1 | 2);
+		if(state1.isAir() || state1.getMaterial().isReplaceable()) {
+			world.setBlock(pos1, state, 1 | 2);
 			world.removeBlock(pos, false);
-			world.playEvent(2001, pos, Block.getStateId(state));
+			world.levelEvent(2001, pos, Block.getId(state));
 		}
 
 		return null;

@@ -8,25 +8,24 @@
  */
 package vazkii.psi.client.jei.tricks;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 
-import net.minecraft.client.renderer.model.RenderMaterial;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
-import vazkii.psi.api.ClientPsiAPI;
 import vazkii.psi.api.recipe.ITrickRecipe;
-import vazkii.psi.common.Psi;
 import vazkii.psi.common.item.base.ModItems;
 import vazkii.psi.common.lib.LibMisc;
 
@@ -39,11 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TrickCraftingCategory implements IRecipeCategory<ITrickRecipe> {
-	public static final ResourceLocation UID = new ResourceLocation(LibMisc.MOD_ID, "trick");
-
-	private static final int INPUT_SLOT = 0;
-	private static final int CAD_SLOT = 1;
-	private static final int OUTPUT_SLOT = 2;
+	public static final RecipeType<ITrickRecipe> TYPE = RecipeType.create(LibMisc.MOD_ID, "trick", ITrickRecipe.class);
 
 	private static final int trickX = 43;
 	private static final int trickY = 24;
@@ -59,26 +54,19 @@ public class TrickCraftingCategory implements IRecipeCategory<ITrickRecipe> {
 	public TrickCraftingCategory(IGuiHelper helper) {
 		this.helper = helper;
 		background = helper.createDrawable(new ResourceLocation(LibMisc.MOD_ID, "textures/gui/jei/trick.png"), 0, 0, 96, 41);
-		icon = helper.createDrawableIngredient(new ItemStack(ModItems.psidust));
+		icon = helper.createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModItems.psidust));
 		programmerHover = helper.createDrawable(new ResourceLocation("psi", "textures/gui/programmer.png"), 16, 184, 16, 16);
 	}
 
-	@Nonnull
 	@Override
-	public ResourceLocation getUid() {
-		return UID;
+	public RecipeType<ITrickRecipe> getRecipeType() {
+		return TYPE;
 	}
 
 	@Nonnull
 	@Override
-	public Class<? extends ITrickRecipe> getRecipeClass() {
-		return ITrickRecipe.class;
-	}
-
-	@Nonnull
-	@Override
-	public String getTitle() {
-		return I18n.format("jei." + LibMisc.MOD_ID + ".category.trick");
+	public Component getTitle() {
+		return Component.literal(I18n.get("jei." + LibMisc.MOD_ID + ".category.trick"));
 	}
 
 	@Nonnull
@@ -94,39 +82,24 @@ public class TrickCraftingCategory implements IRecipeCategory<ITrickRecipe> {
 	}
 
 	@Override
-	public void setIngredients(ITrickRecipe recipe, IIngredients ingredients) {
-		ingredients.setInputLists(VanillaTypes.ITEM, ImmutableList.of(
-				ImmutableList.copyOf(recipe.getInput().getMatchingStacks()), ImmutableList.of(recipe.getAssembly())
-		));
-		ingredients.setOutput(VanillaTypes.ITEM, recipe.getRecipeOutput());
-	}
-
-	@Override
-	public void draw(ITrickRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
-		if (recipe.getPiece() != null) {
+	public void draw(ITrickRecipe recipe, IRecipeSlotsView recipeSlotsView, PoseStack poseStack, double mouseX, double mouseY) {
+		if(recipe.getPiece() != null) {
 			IDrawable trickIcon = trickIcons.computeIfAbsent(recipe.getPiece().registryKey,
-					key -> {
-						RenderMaterial mat = ClientPsiAPI.getSpellPieceMaterial(key);
-						if (mat == null) {
-							Psi.logger.warn("Not rendering complex (or missing) render for {}", key);
-							return helper.createBlankDrawable(16, 16);
-						}
-						return new DrawableTAS(mat.getSprite());
-					});
+					key -> new DrawablePiece(recipe.getPiece()));
 
-			trickIcon.draw(matrixStack, trickX, trickY);
+			trickIcon.draw(poseStack, trickX, trickY);
 
-			if (onTrick(mouseX, mouseY)) {
-				programmerHover.draw(matrixStack, trickX, trickY);
+			if(onTrick(mouseX, mouseY)) {
+				programmerHover.draw(poseStack, trickX, trickY);
 			}
 		}
 	}
 
 	@Nonnull
 	@Override
-	public List<ITextComponent> getTooltipStrings(ITrickRecipe recipe, double mouseX, double mouseY) {
-		if (recipe.getPiece() != null && onTrick(mouseX, mouseY)) {
-			List<ITextComponent> tooltip = new ArrayList<>();
+	public List<Component> getTooltipStrings(ITrickRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+		if(recipe.getPiece() != null && onTrick(mouseX, mouseY)) {
+			List<Component> tooltip = new ArrayList<>();
 			recipe.getPiece().getTooltip(tooltip);
 			return tooltip;
 		}
@@ -138,11 +111,9 @@ public class TrickCraftingCategory implements IRecipeCategory<ITrickRecipe> {
 	}
 
 	@Override
-	public void setRecipe(@Nonnull IRecipeLayout recipeLayout, @Nonnull ITrickRecipe recipe, @Nonnull IIngredients ingredients) {
-		recipeLayout.getItemStacks().init(INPUT_SLOT, true, 0, 5);
-		recipeLayout.getItemStacks().init(CAD_SLOT, true, 21, 23);
-		recipeLayout.getItemStacks().init(OUTPUT_SLOT, false, 73, 5);
-
-		recipeLayout.getItemStacks().set(ingredients);
+	public void setRecipe(IRecipeLayoutBuilder builder, ITrickRecipe recipe, IFocusGroup focuses) {
+		builder.addSlot(RecipeIngredientRole.INPUT, 1, 6).addIngredients(recipe.getInput());
+		builder.addSlot(RecipeIngredientRole.CATALYST, 22, 24).addItemStack(recipe.getAssembly());
+		builder.addSlot(RecipeIngredientRole.OUTPUT, 74, 6).addItemStack(recipe.getResultItem());
 	}
 }

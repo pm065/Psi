@@ -8,7 +8,7 @@
  */
 package vazkii.psi.api.spell.piece;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.spell.Spell;
@@ -27,7 +27,7 @@ public abstract class PieceCraftingTrick extends PieceTrick {
 	@Override
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		ItemStack cad = PsiAPI.getPlayerCAD(context.caster);
-		if (cad.getItem() instanceof ItemCAD) {
+		if(cad.getItem() instanceof ItemCAD) {
 			((ItemCAD) cad.getItem()).craft(cad, context.caster, this);
 		}
 		return null;

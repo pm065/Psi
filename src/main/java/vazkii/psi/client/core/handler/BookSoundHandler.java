@@ -9,7 +9,7 @@
 package vazkii.psi.client.core.handler;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.audio.SimpleSound;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
@@ -38,28 +38,28 @@ public class BookSoundHandler {
 	private static int bookTime = 0;
 
 	private static boolean isBookOpen() {
-		return Objects.equals(PatchouliAPI.instance.getOpenBookGui(), LibResources.PATCHOULI_BOOK);
+		return Objects.equals(PatchouliAPI.get().getOpenBookGui(), LibResources.PATCHOULI_BOOK);
 	}
 
 	@SubscribeEvent
 	public static void clientTick(TickEvent.ClientTickEvent evt) {
-		if (bookTime > 0) {
+		if(bookTime > 0) {
 			bookTime--;
 		}
 
-		if (!isBookOpen()) {
+		if(!isBookOpen()) {
 			nextLetter = 0;
 		}
 	}
 
 	@SubscribeEvent
-	public static void handleInput(InputEvent.KeyInputEvent evt) {
+	public static void handleInput(InputEvent.Key evt) {
 		Minecraft mc = Minecraft.getInstance();
-		if (evt.getModifiers() == 0 && evt.getAction() == GLFW.GLFW_PRESS && isBookOpen()) {
-			if (bookTime == 0 && evt.getKey() == SECRET_CODE[nextLetter]) {
+		if(evt.getModifiers() == 0 && evt.getAction() == GLFW.GLFW_PRESS && isBookOpen()) {
+			if(bookTime == 0 && evt.getKey() == SECRET_CODE[nextLetter]) {
 				nextLetter++;
-				if (nextLetter >= SECRET_CODE.length) {
-					mc.getSoundHandler().play(SimpleSound.master(PsiSoundHandler.book, 1.0F));
+				if(nextLetter >= SECRET_CODE.length) {
+					mc.getSoundManager().play(SimpleSoundInstance.forUI(PsiSoundHandler.book, 1.0F));
 					nextLetter = 0;
 					bookTime = 320;
 				}

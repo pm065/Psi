@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.spell.Spell;
 import vazkii.psi.api.spell.SpellContext;
@@ -34,11 +34,11 @@ public class PieceOperatorEntityHeight extends PieceOperator {
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		Entity e = this.getParamValue(context, target);
 
-		if (e == null) {
+		if(e == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 
-		return e.getHeight();
+		return e.getBbHeight();
 	}
 
 	@Override

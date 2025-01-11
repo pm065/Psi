@@ -8,13 +8,10 @@
  */
 package vazkii.psi.common.core.handler;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DefaultUncaughtExceptionHandler;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-
-import org.apache.logging.log4j.Level;
 
 import vazkii.psi.api.cad.CADTakeEvent;
 import vazkii.psi.api.cad.EnumCADComponent;
@@ -30,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
@@ -42,20 +40,20 @@ public final class ContributorSpellCircleHandler {
 
 	public static void load(Properties props) {
 		Map<String, int[]> m = new HashMap<>();
-		for (String key : props.stringPropertyNames()) {
+		for(String key : props.stringPropertyNames()) {
 			String value = props.getProperty(key).replace("#", "0x");
 			try {
 				int[] values = Stream.of(value.split(",")).mapToInt(el -> Integer.parseInt(el.substring(2), 16)).toArray();
 				m.put(key, values);
-			} catch (NumberFormatException e) {
-				Psi.logger.log(Level.ERROR, "Contributor " + key + " has an invalid hexcode!");
+			} catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+				Psi.logger.error("Contributor " + key + " has an invalid hexcode!");
 			}
 		}
 		colormap = m;
 	}
 
 	public static void firstStart() {
-		if (!startedLoading) {
+		if(!startedLoading) {
 			new ThreadContributorListLoader();
 			startedLoading = true;
 		}
@@ -71,7 +69,7 @@ public final class ContributorSpellCircleHandler {
 
 	@SubscribeEvent
 	public static void onCadTake(CADTakeEvent event) {
-		if (ContributorSpellCircleHandler.isContributor(event.getPlayer().getName().getString().toLowerCase()) && !((ICAD) event.getCad().getItem()).getComponentInSlot(event.getCad(), EnumCADComponent.DYE).isEmpty()) {
+		if(ContributorSpellCircleHandler.isContributor(event.getPlayer().getName().getString().toLowerCase(Locale.ROOT)) && !event.getCad().isEmpty() && !((ICAD) event.getCad().getItem()).getComponentInSlot(event.getCad(), EnumCADComponent.DYE).isEmpty()) {
 			ItemStack dyeStack = ((ICAD) event.getCad().getItem()).getComponentInSlot(event.getCad(), EnumCADComponent.DYE);
 			((ICADColorizer) dyeStack.getItem()).setContributorName(dyeStack, event.getPlayer().getName().getString());
 			ItemCAD.setComponent(event.getCad(), dyeStack);
@@ -80,8 +78,8 @@ public final class ContributorSpellCircleHandler {
 
 	@SubscribeEvent
 	public static void craftColorizer(PlayerEvent.ItemCraftedEvent event) {
-		if (ContributorSpellCircleHandler.isContributor(event.getPlayer().getName().getString().toLowerCase()) && event.getCrafting().getItem() instanceof ICADColorizer) {
-			((ICADColorizer) event.getCrafting().getItem()).setContributorName(event.getCrafting(), event.getPlayer().getName().getString());
+		if(ContributorSpellCircleHandler.isContributor(event.getEntity().getName().getString().toLowerCase(Locale.ROOT)) && event.getCrafting().getItem() instanceof ICADColorizer) {
+			((ICADColorizer) event.getCrafting().getItem()).setContributorName(event.getCrafting(), event.getEntity().getName().getString());
 		}
 	}
 
@@ -90,14 +88,14 @@ public final class ContributorSpellCircleHandler {
 		public ThreadContributorListLoader() {
 			setName("Psi Contributor Spell Circle Loader Thread");
 			setDaemon(true);
-			setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(Psi.logger));
+			setUncaughtExceptionHandler((thread, err) -> Psi.logger.error("Caught off-thread exception from " + thread.getName() + ": ", err));
 			start();
 		}
 
 		@Override
 		public void run() {
 			try {
-				URL url = new URL("https://raw.githubusercontent.com/Vazkii/Psi/master/contributors.properties");
+				URL url = new URL("https://raw.githubusercontent.com/VazkiiMods/Psi/master/contributors.properties");
 				Properties props = new Properties();
 				try (InputStreamReader reader = new InputStreamReader(url.openStream(), StandardCharsets.UTF_8)) {
 					props.load(reader);
@@ -107,6 +105,5 @@ public final class ContributorSpellCircleHandler {
 				Psi.logger.info("Could not load contributors list. Either you're offline or github is down. Nothing to worry about, carry on~");
 			}
 		}
-
 	}
 }

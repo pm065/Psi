@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.cad.ICAD;
@@ -43,7 +43,7 @@ public class PieceTrickRussianRoulette extends PieceTrick {
 		int targetSlot = getRandomSocketableSlot(capability);
 
 		capability.setSelectedSlot(targetSlot);
-		if (updateLoopcast) {
+		if(updateLoopcast) {
 			PlayerDataHandler.get(context.caster).lastTickLoopcastStack = stack.copy();
 		}
 		return null;

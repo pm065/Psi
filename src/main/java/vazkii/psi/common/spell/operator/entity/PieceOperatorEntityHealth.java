@@ -8,8 +8,8 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 import vazkii.psi.api.spell.Spell;
 import vazkii.psi.api.spell.SpellContext;
@@ -39,7 +39,7 @@ public class PieceOperatorEntityHealth extends PieceOperator {
 	@Override
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		Entity entity = this.getNonnullParamValue(context, target);
-		if (!(entity instanceof LivingEntity)) {
+		if(!(entity instanceof LivingEntity)) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 

@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.spell.Spell;
 import vazkii.psi.api.spell.SpellContext;
@@ -39,7 +39,7 @@ public class PieceOperatorListAdd extends PieceOperator {
 		Entity targetVal = this.getParamValue(context, target);
 		EntityListWrapper listVal = this.getParamValueOrDefault(context, list, EntityListWrapper.EMPTY);
 
-		if (targetVal == null) {
+		if(targetVal == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 

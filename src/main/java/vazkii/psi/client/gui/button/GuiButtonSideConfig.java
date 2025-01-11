@@ -8,15 +8,11 @@
  */
 package vazkii.psi.client.gui.button;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.widget.button.Button;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 
 import vazkii.psi.api.internal.PsiRenderHelper;
 import vazkii.psi.api.spell.SpellParam;
@@ -33,7 +29,7 @@ public class GuiButtonSideConfig extends Button {
 	final SpellParam.Side side;
 
 	public GuiButtonSideConfig(GuiProgrammer gui, int gridX, int gridY, int paramIndex, String paramName, SpellParam.Side side, int x, int y) {
-		super(x, y, 8, 8, StringTextComponent.EMPTY, Button::onPress);
+		super(x, y, 8, 8, Component.empty(), Button::onPress);
 		this.gui = gui;
 		this.gridX = gridX;
 		this.gridY = gridY;
@@ -42,8 +38,8 @@ public class GuiButtonSideConfig extends Button {
 		this.side = side;
 	}
 
-	public GuiButtonSideConfig(GuiProgrammer gui, int gridX, int gridY, int paramIndex, String paramName, SpellParam.Side side, int x, int y, IPressable pressable) {
-		super(x, y, 8, 8, StringTextComponent.EMPTY, pressable);
+	public GuiButtonSideConfig(GuiProgrammer gui, int gridX, int gridY, int paramIndex, String paramName, SpellParam.Side side, int x, int y, OnPress pressable) {
+		super(x, y, 8, 8, Component.empty(), pressable);
 		this.gui = gui;
 		this.gridX = gridX;
 		this.gridY = gridY;
@@ -53,31 +49,31 @@ public class GuiButtonSideConfig extends Button {
 	}
 
 	@Override
-	public void renderButton(MatrixStack ms, int par2, int par3, float pTicks) {
-		if (active && visible && !gui.takingScreenshot) {
+	public void renderButton(PoseStack ms, int par2, int par3, float pTicks) {
+		if(active && visible && !gui.takingScreenshot) {
 			int minX = x;
 			int minY = y;
 			int maxX = minX + 8;
 			int maxY = minY + 8;
 
-			Minecraft.getInstance().textureManager.bindTexture(GuiProgrammer.texture);
+			RenderSystem.setShaderTexture(0, GuiProgrammer.texture);
 			SpellPiece piece = gui.spell.grid.gridData[gridX][gridY];
-			if (piece == null) {
+			if(piece == null) {
 				return;
 			}
 
 			SpellParam<?> param = piece.params.get(paramName);
-			if (param == null) {
+			if(param == null) {
 				return;
 			}
 
 			SpellParam.Side currSide = piece.paramSides.get(param);
-			if (currSide == side) {
-				RenderSystem.color4f(PsiRenderHelper.r(param.color) / 255F,
+			if(currSide == side) {
+				RenderSystem.setShaderColor(PsiRenderHelper.r(param.color) / 255F,
 						PsiRenderHelper.g(param.color) / 255F,
 						PsiRenderHelper.b(param.color) / 255F, 1F);
 			} else {
-				RenderSystem.color3f(1F, 1F, 1F);
+				RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
 			}
 
 			float wh = 8F;
@@ -85,15 +81,15 @@ public class GuiButtonSideConfig extends Button {
 			float minV = side.v / 256F;
 			float maxU = (side.u + wh) / 256F;
 			float maxV = (side.v + wh) / 256F;
-			RenderSystem.enableAlphaTest();
-			BufferBuilder wr = Tessellator.getInstance().getBuffer();
-			wr.begin(7, DefaultVertexFormats.POSITION_TEX);
-			wr.pos(minX, maxY, 0).tex(minU, maxV).endVertex();
-			wr.pos(maxX, maxY, 0).tex(maxU, maxV).endVertex();
-			wr.pos(maxX, minY, 0).tex(maxU, minV).endVertex();
-			wr.pos(minX, minY, 0).tex(minU, minV).endVertex();
-			Tessellator.getInstance().draw();
-			RenderSystem.disableAlphaTest();
+			//RenderSystem.enableAlphaTest(); //TODO Alpha Test?
+			BufferBuilder wr = Tesselator.getInstance().getBuilder();
+			wr.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX); //TODO Check if QUADS is correct
+			wr.vertex(minX, maxY, 0).uv(minU, maxV).endVertex();
+			wr.vertex(maxX, maxY, 0).uv(maxU, maxV).endVertex();
+			wr.vertex(maxX, minY, 0).uv(maxU, minV).endVertex();
+			wr.vertex(minX, minY, 0).uv(minU, minV).endVertex();
+			Tesselator.getInstance().end();
+			//RenderSystem.disableAlphaTest();
 		}
 	}
 
@@ -103,12 +99,12 @@ public class GuiButtonSideConfig extends Button {
 
 	public static void performAction(GuiProgrammer gui, int gridX, int gridY, String paramName, SpellParam.Side side) {
 		SpellPiece piece = gui.spell.grid.gridData[gridX][gridY];
-		if (piece == null) {
+		if(piece == null) {
 			return;
 		}
 
 		SpellParam<?> param = piece.params.get(paramName);
-		if (param == null) {
+		if(param == null) {
 			return;
 		}
 

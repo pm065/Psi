@@ -8,8 +8,8 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.Spell;
@@ -39,23 +39,23 @@ public class PieceOperatorEntityMotion extends PieceOperator {
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		Entity e = this.getParamValue(context, target);
 
-		if (e == null) {
+		if(e == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 
-		if (e instanceof PlayerEntity) {
-			PlayerEntity player = (PlayerEntity) e;
+		if(e instanceof Player) {
+			Player player = (Player) e;
 			PlayerData data = PlayerDataHandler.get(player);
-			if (data.eidosChangelog.size() >= 2) {
+			if(data.eidosChangelog.size() >= 2) {
 				Vector3 last = data.eidosChangelog.get(data.eidosChangelog.size() - 2);
 				Vector3 vec = Vector3.fromEntity(e).sub(last).multiply(1.0 / PieceTrickAddMotion.MULTIPLIER);
-				if (vec.mag() < 10) {
+				if(vec.mag() < 10) {
 					return vec;
 				}
 			}
 		}
 
-		return new Vector3(e.getMotion()).multiply(1.0 / PieceTrickAddMotion.MULTIPLIER);
+		return new Vector3(e.getDeltaMovement()).multiply(1.0 / PieceTrickAddMotion.MULTIPLIER);
 	}
 
 	@Override

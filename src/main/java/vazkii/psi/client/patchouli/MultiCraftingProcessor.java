@@ -9,13 +9,11 @@
 package vazkii.psi.client.patchouli;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.crafting.ICraftingRecipe;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.core.NonNullList;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraftforge.common.crafting.IShapedRecipe;
 
 import vazkii.patchouli.api.IComponentProcessor;
@@ -30,26 +28,26 @@ import java.util.stream.Collectors;
 
 // https://github.com/Vazkii/Botania/blob/master/src/main/java/vazkii/botania/client/patchouli/processor/MultiCraftingProcessor.java
 public class MultiCraftingProcessor implements IComponentProcessor {
-	private List<ICraftingRecipe> recipes;
+	private List<CraftingRecipe> recipes;
 	private boolean shapeless = true;
 	private int longestIngredientSize = 0;
 	private boolean hasCustomHeading;
 
 	@Override
 	public void setup(IVariableProvider variables) {
-		Map<ResourceLocation, IRecipe<CraftingInventory>> recipeMap = Minecraft.getInstance().world.getRecipeManager().getRecipes(IRecipeType.CRAFTING);
+		Map<ResourceLocation, CraftingRecipe> recipeMap = Minecraft.getInstance().level.getRecipeManager().byType(RecipeType.CRAFTING);
 		List<String> names = variables.get("recipes").asStream().map(IVariable::asString).collect(Collectors.toList());
 		this.recipes = new ArrayList<>();
-		for (String name : names) {
-			IRecipe<?> recipe = recipeMap.get(new ResourceLocation(name));
-			if (recipe != null) {
-				recipes.add((ICraftingRecipe) recipe);
-				if (shapeless) {
+		for(String name : names) {
+			CraftingRecipe recipe = recipeMap.get(new ResourceLocation(name));
+			if(recipe != null) {
+				recipes.add(recipe);
+				if(shapeless) {
 					shapeless = !(recipe instanceof IShapedRecipe);
 				}
-				for (Ingredient ingredient : recipe.getIngredients()) {
-					int size = ingredient.getMatchingStacks().length;
-					if (longestIngredientSize < size) {
+				for(Ingredient ingredient : recipe.getIngredients()) {
+					int size = ingredient.getItems().length;
+					if(longestIngredientSize < size) {
 						longestIngredientSize = size;
 					}
 				}
@@ -62,24 +60,24 @@ public class MultiCraftingProcessor implements IComponentProcessor {
 
 	@Override
 	public IVariable process(String key) {
-		if (recipes.isEmpty()) {
+		if(recipes.isEmpty()) {
 			return null;
 		}
-		if (key.equals("heading")) {
-			if (!hasCustomHeading) {
-				return IVariable.from(recipes.get(0).getRecipeOutput().getDisplayName());
+		if(key.equals("heading")) {
+			if(!hasCustomHeading) {
+				return IVariable.from(recipes.get(0).getResultItem().getHoverName());
 			}
 			return null;
 		}
-		if (key.startsWith("input")) {
+		if(key.startsWith("input")) {
 			int index = Integer.parseInt(key.substring(5)) - 1;
 			int shapedX = index % 3;
 			int shapedY = index / 3;
 			List<Ingredient> ingredients = new ArrayList<>();
-			for (ICraftingRecipe recipe : recipes) {
-				if (recipe instanceof IShapedRecipe) {
+			for(CraftingRecipe recipe : recipes) {
+				if(recipe instanceof IShapedRecipe) {
 					IShapedRecipe<?> shaped = (IShapedRecipe<?>) recipe;
-					if (shaped.getRecipeWidth() < shapedX + 1) {
+					if(shaped.getRecipeWidth() < shapedX + 1) {
 						ingredients.add(Ingredient.EMPTY);
 					} else {
 						int realIndex = index - (shapedY * (3 - shaped.getRecipeWidth()));
@@ -94,10 +92,10 @@ public class MultiCraftingProcessor implements IComponentProcessor {
 			}
 			return PatchouliUtils.interweaveIngredients(ingredients, longestIngredientSize);
 		}
-		if (key.equals("output")) {
-			return IVariable.wrapList(recipes.stream().map(ICraftingRecipe::getRecipeOutput).map(IVariable::from).collect(Collectors.toList()));
+		if(key.equals("output")) {
+			return IVariable.wrapList(recipes.stream().map(CraftingRecipe::getResultItem).map(IVariable::from).collect(Collectors.toList()));
 		}
-		if (key.equals("shapeless")) {
+		if(key.equals("shapeless")) {
 			return IVariable.wrap(shapeless);
 		}
 		return null;
