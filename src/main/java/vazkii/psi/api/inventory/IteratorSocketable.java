@@ -8,7 +8,7 @@
  */
 package vazkii.psi.api.inventory;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 import vazkii.psi.api.cad.ISocketable;
 
@@ -37,7 +37,7 @@ public class IteratorSocketable implements Iterator<ItemStack> {
 
 	@Override
 	public void remove() {
-		if (index < 0 || removed) {
+		if(index < 0 || removed) {
 			throw new IllegalStateException();
 		}
 

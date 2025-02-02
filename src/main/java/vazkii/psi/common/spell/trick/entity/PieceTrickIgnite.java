@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.spell.EnumSpellStat;
 import vazkii.psi.api.spell.Spell;
@@ -44,7 +44,7 @@ public class PieceTrickIgnite extends PieceTrick {
 		super.addToMetadata(meta);
 		Double timeVal = this.<Double>getParamEvaluation(time);
 
-		if (timeVal == null || timeVal <= 0 || timeVal != timeVal.intValue()) {
+		if(timeVal == null || timeVal <= 0 || timeVal != timeVal.intValue()) {
 			throw new SpellCompilationException(SpellCompilationException.NON_POSITIVE_INTEGER, x, y);
 		}
 
@@ -58,7 +58,7 @@ public class PieceTrickIgnite extends PieceTrick {
 		int timeVal = this.getParamValue(context, time).intValue();
 
 		context.verifyEntity(targetVal);
-		targetVal.setFire(timeVal);
+		targetVal.setSecondsOnFire(timeVal);
 
 		return null;
 	}

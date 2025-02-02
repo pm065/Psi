@@ -8,10 +8,9 @@
  */
 package vazkii.psi.api.cad;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.spell.ISpellAcceptor;
@@ -44,18 +43,18 @@ public interface ISocketable {
 
 	int MAX_ASSEMBLER_SLOTS = 12;
 
-	static ITextComponent getSocketedItemName(ItemStack stack, String fallbackKey) {
-		if (stack.isEmpty() || !isSocketable(stack)) {
-			return new TranslationTextComponent(fallbackKey);
+	static Component getSocketedItemName(ItemStack stack, String fallbackKey) {
+		if(stack.isEmpty() || !isSocketable(stack)) {
+			return Component.translatable(fallbackKey);
 		}
 
 		ISocketable socketable = socketable(stack);
 		ItemStack item = socketable.getSelectedBullet();
-		if (item.isEmpty()) {
-			return new TranslationTextComponent(fallbackKey);
+		if(item.isEmpty()) {
+			return Component.translatable(fallbackKey);
 		}
 
-		return item.getDisplayName();
+		return item.getHoverName();
 	}
 
 	static boolean isSocketable(ItemStack stack) {
@@ -70,8 +69,8 @@ public interface ISocketable {
 
 	default List<Integer> getRadialMenuSlots() {
 		List<Integer> list = new ArrayList<>();
-		for (int i = 0; i < MAX_ASSEMBLER_SLOTS; i++) {
-			if (isSocketSlotAvailable(i)) {
+		for(int i = 0; i < MAX_ASSEMBLER_SLOTS; i++) {
+			if(isSocketSlotAvailable(i)) {
 				list.add(i);
 			}
 		}
@@ -92,7 +91,7 @@ public interface ISocketable {
 
 	default int getLastSlot() {
 		int slot = 0;
-		while (isSocketSlotAvailable(slot + 1)) {
+		while(isSocketSlotAvailable(slot + 1)) {
 			slot++;
 		}
 		return slot;
@@ -103,11 +102,11 @@ public interface ISocketable {
 	}
 
 	default boolean isItemValid(int slot, ItemStack bullet) {
-		if (!isSocketSlotAvailable(slot)) {
+		if(!isSocketSlotAvailable(slot)) {
 			return false;
 		}
 
-		if (!ISpellAcceptor.isContainer(bullet)) {
+		if(!ISpellAcceptor.isContainer(bullet)) {
 			return false;
 		}
 

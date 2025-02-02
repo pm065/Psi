@@ -8,9 +8,9 @@
  */
 package vazkii.psi.common.spell.trick;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Explosion;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.block.state.BlockState;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.EnumSpellStat;
@@ -47,7 +47,7 @@ public class PieceTrickExplode extends PieceTrick {
 		super.addToMetadata(meta);
 
 		Double powerVal = this.<Double>getParamEvaluation(power);
-		if (powerVal == null || powerVal <= 0) {
+		if(powerVal == null || powerVal <= 0) {
 			throw new SpellCompilationException(SpellCompilationException.NON_POSITIVE_VALUE, x, y);
 		}
 
@@ -62,17 +62,17 @@ public class PieceTrickExplode extends PieceTrick {
 		Vector3 positionVal = this.getParamValue(context, position);
 		double powerVal = this.getParamValue(context, power).doubleValue();
 
-		if (positionVal == null) {
+		if(positionVal == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_VECTOR);
 		}
-		if (!context.isInRadius(positionVal)) {
+		if(!context.isInRadius(positionVal)) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
 		BlockPos pos = positionVal.toBlockPos();
-		BlockState state = context.focalPoint.getEntityWorld().getBlockState(pos);
+		BlockState state = context.focalPoint.getCommandSenderWorld().getBlockState(pos);
 
-		context.focalPoint.getEntityWorld().createExplosion(context.focalPoint, positionVal.x, positionVal.y, positionVal.z, (float) powerVal, state.getMaterial().isLiquid() ? Explosion.Mode.NONE : Explosion.Mode.BREAK);
+		context.focalPoint.getCommandSenderWorld().explode(context.focalPoint, positionVal.x, positionVal.y, positionVal.z, (float) powerVal, state.getMaterial().isLiquid() ? Explosion.BlockInteraction.NONE : Explosion.BlockInteraction.BREAK);
 		return null;
 	}
 

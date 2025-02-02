@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.spell.Spell;
 import vazkii.psi.api.spell.SpellContext;
@@ -34,11 +34,11 @@ public class PieceOperatorRandomEntity extends PieceOperator {
 	@Override
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		EntityListWrapper listVal = this.getParamValue(context, list);
-		if (listVal.size() == 0) {
+		if(listVal.size() == 0) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 
-		return listVal.get(context.caster.getEntityWorld().rand.nextInt(listVal.size()));
+		return listVal.get(context.caster.getCommandSenderWorld().random.nextInt(listVal.size()));
 	}
 
 	@Override

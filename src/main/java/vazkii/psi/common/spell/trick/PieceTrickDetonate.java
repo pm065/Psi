@@ -46,7 +46,7 @@ public class PieceTrickDetonate extends PieceTrick {
 		meta.addStat(EnumSpellStat.POTENCY, (int) Math.min(radiusVal, 5));
 		meta.addStat(EnumSpellStat.COST, (int) Math.ceil(radiusVal * 5));
 
-		if (radiusVal == 0) {
+		if(radiusVal == 0) {
 			meta.addStat(EnumSpellStat.COMPLEXITY, 1);
 		}
 	}
@@ -55,11 +55,11 @@ public class PieceTrickDetonate extends PieceTrick {
 	public Object execute(SpellContext context) throws SpellRuntimeException {
 		double radiusVal = Math.min(MAX_DISTANCE, this.getNonnullParamValue(context, radius).doubleValue());
 
-		if (radiusVal == 0.0) {
-			IDetonationHandler.performDetonation(context.caster.world, context.caster, 0, entity -> entity == context.caster);
+		if(radiusVal == 0.0) {
+			IDetonationHandler.performDetonation(context.focalPoint.level, context.caster, 0, entity -> entity == context.caster);
 			return null;
 		}
-		IDetonationHandler.performDetonation(context.caster.world, context.caster, context.focalPoint, radiusVal);
+		IDetonationHandler.performDetonation(context.focalPoint.level, context.caster, context.focalPoint, radiusVal);
 		return null;
 	}
 }

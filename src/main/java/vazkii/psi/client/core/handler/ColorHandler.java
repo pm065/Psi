@@ -9,8 +9,8 @@
 package vazkii.psi.client.core.handler;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.color.ItemColors;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.color.item.ItemColors;
+import net.minecraft.util.Mth;
 
 import vazkii.psi.common.item.ItemCAD;
 import vazkii.psi.common.item.ItemExosuitSensor;
@@ -38,7 +38,7 @@ public class ColorHandler {
 		double t = (ClientTickHandler.total * speed * n / Math.PI) % n;
 		int phase = (int) t;
 		double dt = t - phase;
-		if (dt == 0) {
+		if(dt == 0) {
 			return color[phase];
 		}
 		int nextPhase = (phase + 1) % n;
@@ -58,21 +58,21 @@ public class ColorHandler {
 	}
 
 	public static int pulseColor(int source, float multiplier, float speed, int magnitude) {
-		int add = (int) (MathHelper.sin(ClientTickHandler.ticksInGame * speed) * magnitude);
+		int add = (int) (Mth.sin(ClientTickHandler.ticksInGame * speed) * magnitude);
 		int red = (0xFF0000 & source) >> 16;
 		int green = (0x00FF00 & source) >> 8;
 		int blue = 0x0000FF & source;
-		int addedRed = MathHelper.clamp((int) (multiplier * (red + add)), 0, 255);
-		int addedGreen = MathHelper.clamp((int) (multiplier * (green + add)), 0, 255);
-		int addedBlue = MathHelper.clamp((int) (multiplier * (blue + add)), 0, 255);
+		int addedRed = Mth.clamp((int) (multiplier * (red + add)), 0, 255);
+		int addedGreen = Mth.clamp((int) (multiplier * (green + add)), 0, 255);
+		int addedBlue = Mth.clamp((int) (multiplier * (blue + add)), 0, 255);
 		return (addedRed << 16) | (addedGreen << 8) | addedBlue;
 	}
 
 	public static int slideColorTime(int color, int secondColor, float t) {
-		float shift = (1 - MathHelper.cos(t)) / 2;
-		if (shift == 0) {
+		float shift = (1 - Mth.cos(t)) / 2;
+		if(shift == 0) {
 			return color;
-		} else if (shift == 1) {
+		} else if(shift == 1) {
 			return secondColor;
 		}
 

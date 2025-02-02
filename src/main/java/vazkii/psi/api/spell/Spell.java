@@ -8,11 +8,11 @@
  */
 package vazkii.psi.api.spell;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.ModList;
@@ -46,13 +46,13 @@ public final class Spell {
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void draw(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
+	public void draw(PoseStack ms, MultiBufferSource buffers, int light) {
 		grid.draw(ms, buffers, light);
 	}
 
 	@Nullable
-	public static Spell createFromNBT(CompoundNBT cmp) {
-		if (cmp == null || !cmp.getBoolean(TAG_VALID)) {
+	public static Spell createFromNBT(CompoundTag cmp) {
+		if(cmp == null || !cmp.getBoolean(TAG_VALID)) {
 			return null;
 		}
 
@@ -61,13 +61,13 @@ public final class Spell {
 		return spell;
 	}
 
-	public void readFromNBT(CompoundNBT cmp) {
+	public void readFromNBT(CompoundTag cmp) {
 		name = cmp.getString(TAG_SPELL_NAME);
 
-		if (cmp.contains(TAG_UUID_MOST)) {
+		if(cmp.contains(TAG_UUID_MOST)) {
 			long uuidMost = cmp.getLong(TAG_UUID_MOST);
 			long uuidLeast = cmp.getLong(TAG_UUID_LEAST);
-			if (uuid.getMostSignificantBits() != uuidMost || uuid.getLeastSignificantBits() != uuidLeast) {
+			if(uuid.getMostSignificantBits() != uuidMost || uuid.getLeastSignificantBits() != uuidLeast) {
 				uuid = new UUID(uuidMost, uuidLeast);
 			}
 		}
@@ -77,9 +77,9 @@ public final class Spell {
 
 	public Set<String> getPieceNamespaces() {
 		Set<String> temp = Collections.newSetFromMap(new HashMap<>());
-		for (SpellPiece[] gridDatum : grid.gridData) {
-			for (SpellPiece spellPiece : gridDatum) {
-				if (spellPiece != null) {
+		for(SpellPiece[] gridDatum : grid.gridData) {
+			for(SpellPiece spellPiece : gridDatum) {
+				if(spellPiece != null) {
 					temp.add(spellPiece.registryKey.getNamespace());
 				}
 			}
@@ -87,14 +87,14 @@ public final class Spell {
 		return temp;
 	}
 
-	public void writeToNBT(CompoundNBT cmp) {
+	public void writeToNBT(CompoundTag cmp) {
 		cmp.putBoolean(TAG_VALID, true);
 		cmp.putString(TAG_SPELL_NAME, name);
-		ListNBT modList = new ListNBT();
-		for (String namespace : getPieceNamespaces()) {
-			CompoundNBT nbt = new CompoundNBT();
+		ListTag modList = new ListTag();
+		for(String namespace : getPieceNamespaces()) {
+			CompoundTag nbt = new CompoundTag();
 			nbt.putString(TAG_MOD_NAME, namespace);
-			if (ModList.get().getModContainerById(namespace).isPresent()) {
+			if(ModList.get().getModContainerById(namespace).isPresent()) {
 				nbt.putString(TAG_MOD_VERSION, ModList.get().getModContainerById(namespace).get().getModInfo().getVersion().toString());
 			}
 			modList.add(nbt);
@@ -107,7 +107,7 @@ public final class Spell {
 	}
 
 	public Spell copy() {
-		CompoundNBT cmp = new CompoundNBT();
+		CompoundTag cmp = new CompoundTag();
 		writeToNBT(cmp);
 		return createFromNBT(cmp);
 	}

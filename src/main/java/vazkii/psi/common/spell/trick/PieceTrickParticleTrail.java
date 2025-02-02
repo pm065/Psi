@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick;
 
-import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraftforge.network.PacketDistributor;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.internal.Vector3;
@@ -62,17 +62,17 @@ public class PieceTrickParticleTrail extends PieceTrick {
 		double length = this.getParamValue(context, lengthParam).doubleValue();
 		int time = Math.min(this.getParamValueOrDefault(context, timeParam, 20).intValue(), 1200);
 
-		if (time <= 0) {
+		if(time <= 0) {
 			throw new SpellRuntimeException(SpellRuntimeException.NEGATIVE_NUMBER);
 		}
 
 		time = time / 6;
 
-		if (!context.isInRadius(pos.copy().add(dir.copy().normalize().multiply(length)))) {
+		if(!context.isInRadius(pos.copy().add(dir.copy().normalize().multiply(length)))) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
-		MessageRegister.HANDLER.send(PacketDistributor.DIMENSION.with(() -> context.focalPoint.getEntityWorld().getDimensionKey()), new MessageParticleTrail(pos.toVec3D(), dir.toVec3D(), length, time, PsiAPI.getPlayerCAD(context.caster)));
+		MessageRegister.HANDLER.send(PacketDistributor.DIMENSION.with(() -> context.focalPoint.getCommandSenderWorld().dimension()), new MessageParticleTrail(pos.toVec3D(), dir.toVec3D(), length, time, PsiAPI.getPlayerCAD(context.caster)));
 		return null;
 	}
 }

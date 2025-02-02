@@ -8,10 +8,10 @@
  */
 package vazkii.psi.common.spell.operator.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.ISpellImmune;
@@ -49,15 +49,15 @@ public class PieceOperatorEntityRaycast extends PieceOperator {
 		Vector3 originVal = this.getParamValue(context, origin);
 		Vector3 rayVal = this.getParamValue(context, ray);
 
-		if (originVal == null || rayVal == null) {
+		if(originVal == null || rayVal == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_VECTOR);
 		}
 
 		double maxLen = SpellHelpers.rangeLimitParam(this, context, max, SpellContext.MAX_DISTANCE);
 
-		Entity entity = rayTraceEntities(context.caster.world, context.caster, originVal.toVec3D(), rayVal.toVec3D(),
-				pred -> !pred.isSpectator() && pred.isAlive() && pred.canBeCollidedWith() && !(pred instanceof ISpellImmune), maxLen);
-		if (entity == null) {
+		Entity entity = rayTraceEntities(context.focalPoint.level, originVal.toVec3D(), rayVal.toVec3D(),
+				pred -> !pred.isSpectator() && pred.isAlive() && pred.isPickable() && !(pred instanceof ISpellImmune), maxLen);
+		if(entity == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 
@@ -66,28 +66,28 @@ public class PieceOperatorEntityRaycast extends PieceOperator {
 
 	/**
 	 * [VanillaCopy]
-	 * {@link net.minecraft.entity.projectile.ProjectileHelper#rayTraceEntities(World, Entity, Vector3d, Vector3d, AxisAlignedBB, Predicate)}
-	 * (World, Entity, Vector3d, Vector3d, AxisAlignedBB, Predicate, double)}
+	 * {@link net.minecraft.world.entity.projectile.ProjectileUtil#getEntityHitResult(Entity, Vec3, Vec3, AABB, Predicate, double)}
+	 * (World, Entity, Vec3, Vec3, AxisAlignedBB, Predicate, double)}
 	 * Some slight tweaks as we don't need an AABB provided to us, we can just make one.
 	 */
-	public static Entity rayTraceEntities(World world, Entity caster, Vector3d positionVector, Vector3d lookVector, Predicate<Entity> predicate, double maxDistance) {
+	public static Entity rayTraceEntities(Level world, Vec3 positionVector, Vec3 lookVector, Predicate<Entity> predicate, double maxDistance) {
 		double distance = maxDistance;
 		Entity entity = null;
 
-		Vector3d reachVector = positionVector.add(lookVector.scale(maxDistance));
-		AxisAlignedBB aabb = new AxisAlignedBB(positionVector.x, positionVector.y, positionVector.z, reachVector.x, reachVector.y, reachVector.z).grow(1f, 1f, 1f);
-		for (Entity entity1 : world.getEntitiesInAABBexcluding(caster, aabb, predicate)) {
-			float collisionBorderSize = entity1.getCollisionBorderSize();
-			AxisAlignedBB axisalignedbb = entity1.getBoundingBox().grow(collisionBorderSize);
-			Optional<Vector3d> optional = axisalignedbb.rayTrace(positionVector, reachVector);
-			if (axisalignedbb.contains(positionVector)) {
-				if (0.0D < distance || distance == 0.0D) {
+		Vec3 reachVector = positionVector.add(lookVector.scale(maxDistance));
+		AABB aabb = new AABB(positionVector.x, positionVector.y, positionVector.z, reachVector.x, reachVector.y, reachVector.z).inflate(1f, 1f, 1f);
+		for(Entity entity1 : world.getEntities((Entity) null, aabb, predicate)) {
+			float collisionBorderSize = entity1.getPickRadius();
+			AABB axisalignedbb = entity1.getBoundingBox().inflate(collisionBorderSize);
+			Optional<Vec3> optional = axisalignedbb.clip(positionVector, reachVector);
+			if(axisalignedbb.contains(positionVector)) {
+				if(0.0D < distance || distance == 0.0D) {
 					entity = entity1;
 					distance = 0.0D;
 				}
-			} else if (optional.isPresent()) {
+			} else if(optional.isPresent()) {
 				double distanceTo = positionVector.distanceTo(optional.get());
-				if (distanceTo < distance) {
+				if(distanceTo < distance) {
 					entity = entity1;
 					distance = distanceTo;
 				}

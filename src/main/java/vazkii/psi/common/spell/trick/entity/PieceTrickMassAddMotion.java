@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.EnumSpellStat;
@@ -48,7 +48,7 @@ public class PieceTrickMassAddMotion extends PieceTrick {
 	public void addToMetadata(SpellMetadata meta) throws SpellCompilationException {
 		super.addToMetadata(meta);
 		Double speedVal = this.<Double>getParamEvaluation(speed);
-		if (speedVal == null) {
+		if(speedVal == null) {
 			speedVal = 1D;
 		}
 
@@ -63,7 +63,7 @@ public class PieceTrickMassAddMotion extends PieceTrick {
 		Vector3 directionVal = this.getParamValue(context, direction);
 		double speedVal = this.getParamValue(context, speed).doubleValue();
 
-		for (Entity e : targetVal) {
+		for(Entity e : targetVal) {
 			PieceTrickAddMotion.addMotion(context, e, directionVal, speedVal);
 		}
 

@@ -8,9 +8,9 @@
  */
 package vazkii.psi.common.spell.trick.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 import vazkii.psi.api.spell.EnumSpellStat;
 import vazkii.psi.api.spell.Spell;
@@ -47,7 +47,7 @@ public class PieceTrickBlink extends PieceTrick {
 	public void addToMetadata(SpellMetadata meta) throws SpellCompilationException {
 		super.addToMetadata(meta);
 		Double distanceVal = this.<Double>getParamEvaluation(distance);
-		if (distanceVal == null) {
+		if(distanceVal == null) {
 			distanceVal = 1D;
 		}
 
@@ -67,19 +67,19 @@ public class PieceTrickBlink extends PieceTrick {
 
 	public static void blink(SpellContext context, Entity e, double dist) throws SpellRuntimeException {
 		context.verifyEntity(e);
-		if (!context.isInRadius(e)) {
+		if(!context.isInRadius(e)) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
-		Vector3d look = e.getLookVec();
+		Vec3 look = e.getLookAngle();
 
 		double offX = look.x * dist;
 		double offY = e.equals(context.caster) ? look.y * dist : Math.max(0, look.y * dist);
 		double offZ = look.z * dist;
 
-		e.setPosition(e.getPosX() + offX, e.getPosY() + offY, e.getPosZ() + offZ);
-		if (e instanceof ServerPlayerEntity) {
-			MessageRegister.sendToPlayer(new MessageBlink(offX, offY, offZ), (ServerPlayerEntity) e);
+		e.setPos(e.getX() + offX, e.getY() + offY, e.getZ() + offZ);
+		if(e instanceof ServerPlayer) {
+			MessageRegister.sendToPlayer(new MessageBlink(offX, offY, offZ), (ServerPlayer) e);
 		}
 	}
 

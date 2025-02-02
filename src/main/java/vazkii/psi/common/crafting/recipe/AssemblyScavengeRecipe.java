@@ -8,46 +8,46 @@
  */
 package vazkii.psi.common.crafting.recipe;
 
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.SpecialRecipe;
-import net.minecraft.item.crafting.SpecialRecipeSerializer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.SimpleRecipeSerializer;
+import net.minecraft.world.level.Level;
 
 import vazkii.psi.api.cad.EnumCADComponent;
 import vazkii.psi.api.cad.ICAD;
 
 import javax.annotation.Nonnull;
 
-public class AssemblyScavengeRecipe extends SpecialRecipe {
-	public static final SpecialRecipeSerializer<AssemblyScavengeRecipe> SERIALIZER = new SpecialRecipeSerializer<>(AssemblyScavengeRecipe::new);
+public class AssemblyScavengeRecipe extends CustomRecipe {
+	public static final SimpleRecipeSerializer<AssemblyScavengeRecipe> SERIALIZER = new SimpleRecipeSerializer<>(AssemblyScavengeRecipe::new);
 
 	public AssemblyScavengeRecipe(ResourceLocation id) {
 		super(id);
 	}
 
 	@Override
-	public boolean matches(@Nonnull CraftingInventory inv, @Nonnull World world) {
+	public boolean matches(@Nonnull CraftingContainer inv, @Nonnull Level world) {
 		boolean foundTarget = false;
 
-		for (int i = 0; i < inv.getSizeInventory(); i++) {
-			ItemStack stack = inv.getStackInSlot(i);
-			if (!stack.isEmpty()) {
-				if (stack.getItem() instanceof ICAD) {
-					if (foundTarget) {
+		for(int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack stack = inv.getItem(i);
+			if(!stack.isEmpty()) {
+				if(stack.getItem() instanceof ICAD) {
+					if(foundTarget) {
 						return false;
 					}
 
-					for (EnumCADComponent comp : EnumCADComponent.class.getEnumConstants()) {
-						if (comp == EnumCADComponent.ASSEMBLY) {
+					for(EnumCADComponent comp : EnumCADComponent.class.getEnumConstants()) {
+						if(comp == EnumCADComponent.ASSEMBLY) {
 							continue;
 						}
 
 						ItemStack compStack = ((ICAD) stack.getItem()).getComponentInSlot(stack, comp);
 
-						if (!compStack.isEmpty()) {
+						if(!compStack.isEmpty()) {
 							return false;
 						}
 					}
@@ -64,12 +64,12 @@ public class AssemblyScavengeRecipe extends SpecialRecipe {
 
 	@Nonnull
 	@Override
-	public ItemStack getCraftingResult(@Nonnull CraftingInventory inv) {
+	public ItemStack assemble(@Nonnull CraftingContainer inv) {
 		ItemStack target = ItemStack.EMPTY;
 
-		for (int i = 0; i < inv.getSizeInventory(); i++) {
-			ItemStack stack = inv.getStackInSlot(i);
-			if (!stack.isEmpty()) {
+		for(int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack stack = inv.getItem(i);
+			if(!stack.isEmpty()) {
 				target = stack;
 			}
 		}
@@ -80,17 +80,17 @@ public class AssemblyScavengeRecipe extends SpecialRecipe {
 
 	@Nonnull
 	@Override
-	public IRecipeSerializer<?> getSerializer() {
+	public RecipeSerializer<?> getSerializer() {
 		return SERIALIZER;
 	}
 
 	@Override
-	public boolean canFit(int width, int height) {
+	public boolean canCraftInDimensions(int width, int height) {
 		return true;
 	}
 
 	@Override
-	public boolean isDynamic() {
+	public boolean isSpecial() {
 		return true;
 	}
 }

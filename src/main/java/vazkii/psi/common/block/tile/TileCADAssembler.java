@@ -8,26 +8,27 @@
  */
 package vazkii.psi.common.block.tile;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.INamedContainerProvider;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
-import net.minecraft.network.play.server.SUpdateTileEntityPacket;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
@@ -54,35 +55,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class TileCADAssembler extends TileEntity implements ITileCADAssembler, INamedContainerProvider {
-	@ObjectHolder(LibMisc.PREFIX_MOD + LibBlockNames.CAD_ASSEMBLER)
-	public static TileEntityType<TileCADAssembler> TYPE;
+public class TileCADAssembler extends BlockEntity implements ITileCADAssembler, MenuProvider {
+	@ObjectHolder(registryName = "minecraft:block_entity_type", value = LibMisc.PREFIX_MOD + LibBlockNames.CAD_ASSEMBLER)
+	public static BlockEntityType<TileCADAssembler> TYPE;
 
-	private final IItemHandlerModifiable inventory = new ItemStackHandler(6) {
-		@Override
-		protected void onContentsChanged(int slot) {
-			super.onContentsChanged(slot);
-			if (0 < slot && slot < 6) {
-				clearCachedCAD();
-			}
-		}
+	private final CADStackHandler inventory = new CADStackHandler(6);
 
-		@Override
-		public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-			if (stack.isEmpty()) {
-				return true;
-			}
-
-			if (slot == 0) {
-				return ISocketable.isSocketable(stack);
-			} else if (slot < 6) {
-				return stack.getItem() instanceof ICADComponent &&
-						((ICADComponent) stack.getItem()).getComponentType(stack) == EnumCADComponent.values()[slot - 1];
-			}
-
-			return false;
-		}
-	};
 	private final IItemHandler publicInv = new IItemHandler() {
 		@Override
 		public int getSlots() {
@@ -119,8 +97,8 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 	};
 	private ItemStack cachedCAD;
 
-	public TileCADAssembler() {
-		super(TYPE);
+	public TileCADAssembler(BlockPos pos, BlockState state) {
+		super(TYPE, pos, state);
 	}
 
 	public IItemHandlerModifiable getInventory() {
@@ -130,7 +108,7 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 	@Nonnull
 	@Override
 	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-		return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.orEmpty(cap, LazyOptional.of(() -> publicInv));
+		return ForgeCapabilities.ITEM_HANDLER.orEmpty(cap, LazyOptional.of(() -> publicInv));
 	}
 
 	@Override
@@ -139,11 +117,11 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 	}
 
 	@Override
-	public ItemStack getCachedCAD(PlayerEntity player) {
+	public ItemStack getCachedCAD(Player player) {
 		ItemStack cad = cachedCAD;
-		if (cad == null) {
+		if(cad == null) {
 			ItemStack assembly = getStackForComponent(EnumCADComponent.ASSEMBLY);
-			if (!assembly.isEmpty()) {
+			if(!assembly.isEmpty()) {
 				List<ItemStack> components = IntStream.range(1, 6).mapToObj(inventory::getStackInSlot).collect(Collectors.toList());
 				cad = ItemCAD.makeCADWithAssembly(assembly, components);
 			} else {
@@ -154,7 +132,7 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 
 			MinecraftForge.EVENT_BUS.post(assembling);
 
-			if (assembling.isCanceled()) {
+			if(assembling.isCanceled()) {
 				cad = ItemStack.EMPTY;
 			} else {
 				cad = assembling.getCad();
@@ -179,12 +157,12 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 	@Override
 	public boolean setStackForComponent(EnumCADComponent componentType, ItemStack component) {
 		int slot = getComponentSlot(componentType);
-		if (component.isEmpty()) {
+		if(component.isEmpty()) {
 			inventory.setStackInSlot(slot, component);
 			return true;
-		} else if (component.getItem() instanceof ICADComponent) {
+		} else if(component.getItem() instanceof ICADComponent) {
 			ICADComponent componentItem = (ICADComponent) component.getItem();
-			if (componentItem.getComponentType(component) == componentType) {
+			if(componentItem.getComponentType(component) == componentType) {
 				inventory.setStackInSlot(slot, component);
 				return true;
 			}
@@ -205,7 +183,7 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 
 	@Override
 	public boolean setSocketableStack(ItemStack stack) {
-		if (stack.isEmpty() || ISocketable.isSocketable(stack)) {
+		if(stack.isEmpty() || ISocketable.isSocketable(stack)) {
 			inventory.setStackInSlot(0, stack);
 			return true;
 		}
@@ -216,75 +194,75 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 	@Override
 	public void onCraftCAD(ItemStack cad) {
 		MinecraftForge.EVENT_BUS.post(new PostCADCraftEvent(cad, this));
-		for (int i = 1; i < 6; i++) {
+		for(int i = 1; i < 6; i++) {
 			inventory.setStackInSlot(i, ItemStack.EMPTY);
 		}
-		if (!world.isRemote) {
-			world.playSound(null, getPos().getX() + 0.5, getPos().getY() + 0.5, getPos().getZ() + 0.5, PsiSoundHandler.cadCreate, SoundCategory.BLOCKS, 0.5F, 1F);
+		if(!level.isClientSide) {
+			level.playSound(null, getBlockPos().getX() + 0.5, getBlockPos().getY() + 0.5, getBlockPos().getZ() + 0.5, PsiSoundHandler.cadCreate, SoundSource.BLOCKS, 0.5F, 1F);
 		}
 	}
 
 	@Override
 	public boolean isBulletSlotEnabled(int slot) {
-		if (getSocketableStack().isEmpty()) {
+		if(getSocketableStack().isEmpty()) {
 			return false;
 		}
 		ISocketable socketable = getSocketable();
 		return socketable != null && socketable.isSocketSlotAvailable(slot);
 	}
 
-	@Nonnull
 	@Override
-	public CompoundNBT write(@Nonnull CompoundNBT tag) {
-		tag = super.write(tag);
-		tag.putInt("version", 1);
-		tag.put("Items", CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.writeNBT(inventory, null));
-		return tag;
+	protected void saveAdditional(CompoundTag tag) {
+		super.saveAdditional(tag);
+		ContainerHelper.saveAllItems(tag, inventory.getItems());
 	}
 
 	@Override
-	public void read(BlockState state, CompoundNBT cmp) {
-		super.read(state, cmp);
+	public void load(CompoundTag cmp) {
+		super.load(cmp);
 		readPacketNBT(cmp);
 	}
 
-	public void readPacketNBT(@Nonnull CompoundNBT tag) {
+
+
+	public void readPacketNBT(@Nonnull CompoundTag tag) {
 		// Migrate old CAD assemblers to the new format
-		if (tag.getInt("version") < 1) {
-			ListNBT items = tag.getList("Items", 10);
-			for (int i = 0; i < inventory.getSlots(); i++) {
+		ListTag items = tag.getList("Items", 10);
+		if(items.size() == 19) {
+
+			for(int i = 0; i < inventory.getSlots(); i++) {
 				inventory.setStackInSlot(i, ItemStack.EMPTY);
 			}
 
 			LazyOptional<ISocketable> socketable = LazyOptional.empty();
 
-			for (int i = 0; i < items.size(); ++i) {
-				if (i == 0) // Skip the fake CAD slot
+			for(int i = 0; i < items.size(); ++i) {
+				if(i == 0) // Skip the fake CAD slot
 				{
 					continue;
 				}
 
-				ItemStack stack = ItemStack.read(items.getCompound(i));
+				ItemStack stack = ItemStack.of(items.getCompound(i));
 
-				if (i == 6) { // Socketable item
+				if(i == 6) { // Socketable item
 					setSocketableStack(stack);
 
-					if (!stack.isEmpty()) {
+					if(!stack.isEmpty()) {
 						socketable = stack.getCapability(PsiAPI.SOCKETABLE_CAPABILITY);
 					}
-				} else if (i == 1) // CORE
+				} else if(i == 1) // CORE
 				{
 					setStackForComponent(EnumCADComponent.CORE, stack);
-				} else if (i == 2) // ASSEMBLY
+				} else if(i == 2) // ASSEMBLY
 				{
 					setStackForComponent(EnumCADComponent.ASSEMBLY, stack);
-				} else if (i == 3) // SOCKET
+				} else if(i == 3) // SOCKET
 				{
 					setStackForComponent(EnumCADComponent.SOCKET, stack);
-				} else if (i == 4) // BATTERY
+				} else if(i == 4) // BATTERY
 				{
 					setStackForComponent(EnumCADComponent.BATTERY, stack);
-				} else if (i == 5) // DYE
+				} else if(i == 5) // DYE
 				{
 					setStackForComponent(EnumCADComponent.DYE, stack);
 				} else { // If we've gotten here, the item is a bullet.
@@ -293,30 +271,74 @@ public class TileCADAssembler extends TileEntity implements ITileCADAssembler, I
 				}
 			}
 		} else {
-			CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.readNBT(inventory, null, tag.getList("Items", Constants.NBT.TAG_COMPOUND));
+			ContainerHelper.loadAllItems(tag, inventory.getItems());
 		}
 	}
 
 	@Override
-	public SUpdateTileEntityPacket getUpdatePacket() {
-		return new SUpdateTileEntityPacket(getPos(), -1, getUpdateTag());
+	public ClientboundBlockEntityDataPacket getUpdatePacket() {
+		return ClientboundBlockEntityDataPacket.create(this, (BlockEntity e) -> getUpdateTag());
+		//return new ClientboundBlockEntityDataPacket(getBlockPos(), -1, getUpdateTag());
+	}//TODO Hopefully fixed?
+
+	@Nonnull
+	@Override
+	public CompoundTag getUpdateTag() {
+		CompoundTag cmp = new CompoundTag();
+		saveAdditional(cmp);
+		return cmp;
 	}
 
 	@Nonnull
 	@Override
-	public CompoundNBT getUpdateTag() {
-		return write(new CompoundNBT());
-	}
-
-	@Nonnull
-	@Override
-	public ITextComponent getDisplayName() {
-		return new TranslationTextComponent(ModBlocks.cadAssembler.getTranslationKey());
+	public Component getDisplayName() {
+		return Component.translatable(ModBlocks.cadAssembler.getDescriptionId());
 	}
 
 	@Nullable
 	@Override
-	public Container createMenu(int i, PlayerInventory playerInventory, PlayerEntity playerEntity) {
+	public AbstractContainerMenu createMenu(int i, Inventory playerInventory, Player playerEntity) {
 		return new ContainerCADAssembler(i, playerInventory, this);
+	}
+
+	private class CADStackHandler extends ItemStackHandler {
+
+
+		private CADStackHandler(int size) {
+			super(size);
+		}
+
+		private NonNullList<ItemStack> getItems() {
+			return this.stacks;
+		}
+
+		private void setItems(NonNullList<ItemStack> pItems) {
+			this.stacks = pItems;
+		}
+
+		@Override
+		protected void onContentsChanged(int slot) {
+			super.onContentsChanged(slot);
+			if (0 < slot && slot < 6) {
+				clearCachedCAD();
+			}
+			setChanged();
+		}
+
+		@Override
+		public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+			if (stack.isEmpty()) {
+				return true;
+			}
+
+			if (slot == 0) {
+				return ISocketable.isSocketable(stack);
+			} else if (slot < 6) {
+				return stack.getItem() instanceof ICADComponent &&
+						((ICADComponent) stack.getItem()).getComponentType(stack).ordinal() == slot - 1;
+			}
+
+			return false;
+		}
 	}
 }

@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.selector;
 
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.world.entity.LivingEntity;
 
 import vazkii.psi.api.spell.Spell;
 import vazkii.psi.api.spell.SpellContext;
@@ -28,7 +28,7 @@ public class PieceSelectorAttackTarget extends PieceSelector {
 
 	@Override
 	public Object execute(SpellContext context) throws SpellRuntimeException {
-		if (context.attackedEntity == null) {
+		if(context.attackedEntity == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 

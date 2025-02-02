@@ -8,55 +8,40 @@
  */
 package vazkii.psi.common.core.handler;
 
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundEvent;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegisterEvent;
 
 import vazkii.psi.common.lib.LibMisc;
-import vazkii.psi.common.lib.LibResources;
 
 @Mod.EventBusSubscriber(modid = LibMisc.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class PsiSoundHandler {
 
-	public static SoundEvent bulletCreate;
-	public static SoundEvent cadCreate;
-	public static SoundEvent cadShoot;
-	public static SoundEvent compileError;
-	public static SoundEvent levelUp;
-	public static SoundEvent loopcast;
-	public static SoundEvent book;
-	public static SoundEvent bookOpen;
-	public static SoundEvent bookFlip;
-
-	public static SoundEvent register(String name) {
-		ResourceLocation loc = new ResourceLocation(LibResources.PREFIX_MOD + name);
-
-		return new SoundEvent(loc).setRegistryName(loc);
-	}
+	public static final SoundEvent bulletCreate = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "bullet_create"));
+	public static final SoundEvent cadCreate = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "cad_create"));
+	public static final SoundEvent cadShoot = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "cad_shoot"));
+	public static final SoundEvent compileError = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "compile_error"));
+	public static final SoundEvent levelUp = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "level_up"));
+	public static final SoundEvent loopcast = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "loopcast"));
+	public static final SoundEvent book = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "book"));
+	public static final SoundEvent bookFlip = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "book_flip"));
+	public static final SoundEvent bookOpen = new SoundEvent(new ResourceLocation(LibMisc.MOD_ID, "book_open"));
 
 	@SubscribeEvent
-	public static void registerSounds(RegistryEvent.Register<SoundEvent> evt) {
-		IForgeRegistry<SoundEvent> r = evt.getRegistry();
-		bulletCreate = register("bullet_create");
-		cadCreate = register("cad_create");
-		cadShoot = register("cad_shoot");
-		compileError = register("compile_error");
-		levelUp = register("level_up");
-		loopcast = register("loopcast");
-		book = register("book");
-		bookFlip = register("book_flip");
-		bookOpen = register("book_open");
-		r.register(bookFlip);
-		r.register(bookOpen);
-		r.register(book);
-		r.register(bulletCreate);
-		r.register(cadCreate);
-		r.register(cadShoot);
-		r.register(compileError);
-		r.register(levelUp);
-		r.register(loopcast);
+	public static void registerSounds(RegisterEvent evt) {
+		evt.register(ForgeRegistries.Keys.SOUND_EVENTS, helper -> {
+			helper.register(bulletCreate.getLocation(), bulletCreate);
+			helper.register(cadCreate.getLocation(), cadCreate);
+			helper.register(cadShoot.getLocation(), cadShoot);
+			helper.register(compileError.getLocation(), compileError);
+			helper.register(levelUp.getLocation(), levelUp);
+			helper.register(loopcast.getLocation(), loopcast);
+			helper.register(book.getLocation(), book);
+			helper.register(bookFlip.getLocation(), bookFlip);
+			helper.register(bookOpen.getLocation(), bookOpen);
+		});
 	}
 }

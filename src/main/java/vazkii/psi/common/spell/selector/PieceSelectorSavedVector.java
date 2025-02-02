@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.selector;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 import vazkii.psi.api.PsiAPI;
 import vazkii.psi.api.cad.ICAD;
@@ -44,7 +44,7 @@ public class PieceSelectorSavedVector extends PieceSelector {
 		super.addToMetadata(meta);
 
 		Double numberVal = this.<Double>getParamEvaluation(number);
-		if (numberVal == null || numberVal <= 0 || numberVal != numberVal.intValue()) {
+		if(numberVal == null || numberVal <= 0 || numberVal != numberVal.intValue()) {
 			throw new SpellCompilationException(SpellCompilationException.NON_POSITIVE_INTEGER, x, y);
 		}
 
@@ -56,12 +56,12 @@ public class PieceSelectorSavedVector extends PieceSelector {
 		int numberVal = this.getParamValue(context, number).intValue();
 
 		int n = numberVal - 1;
-		if (context.customData.containsKey(PieceTrickSaveVector.KEY_SLOT_LOCKED + n)) {
+		if(context.customData.containsKey(PieceTrickSaveVector.KEY_SLOT_LOCKED + n)) {
 			throw new SpellRuntimeException(SpellRuntimeException.LOCKED_MEMORY);
 		}
 
 		ItemStack cadStack = PsiAPI.getPlayerCAD(context.caster);
-		if (cadStack == null || !(cadStack.getItem() instanceof ICAD)) {
+		if(cadStack == null || !(cadStack.getItem() instanceof ICAD)) {
 			throw new SpellRuntimeException(SpellRuntimeException.NO_CAD);
 		}
 		ICAD cad = (ICAD) cadStack.getItem();

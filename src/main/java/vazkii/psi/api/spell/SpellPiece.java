@@ -9,28 +9,28 @@
 package vazkii.psi.api.spell;
 
 import com.google.common.base.CaseFormat;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Matrix4f;
 
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderState;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.model.RenderMaterial;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.vector.Matrix4f;
-import net.minecraft.util.text.IFormattableTextComponent;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.client.resources.model.Material;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.ModList;
-
-import org.lwjgl.opengl.GL11;
 
 import vazkii.psi.api.ClientPsiAPI;
 import vazkii.psi.api.PsiAPI;
@@ -119,12 +119,12 @@ public abstract class SpellPiece {
 	 * 
 	 * @see #getEvaluationType()
 	 */
-	public ITextComponent getEvaluationTypeString() {
+	public Component getEvaluationTypeString() {
 		Class<?> evalType = getEvaluationType();
 		String evalStr = evalType == null ? "null" : CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, evalType.getSimpleName());
-		TranslationTextComponent s = new TranslationTextComponent("psi.datatype." + evalStr);
-		if (getPieceType() == EnumPieceType.CONSTANT) {
-			s.append(new StringTextComponent(" ")).append(new TranslationTextComponent("psimisc.constant"));
+		MutableComponent s = Component.translatable("psi.datatype." + evalStr);
+		if(getPieceType() == EnumPieceType.CONSTANT) {
+			s.append(" ").append(Component.translatable("psimisc.constant"));
 		}
 
 		return s;
@@ -171,7 +171,7 @@ public abstract class SpellPiece {
 	 */
 	public <T> T getNonnullParamValue(SpellContext context, SpellParam<T> param) throws SpellRuntimeException {
 		T v = getParamValue(context, param);
-		if (v == null) {
+		if(v == null) {
 			throw new SpellRuntimeException(SpellRuntimeException.NULL_TARGET);
 		}
 		return v;
@@ -183,9 +183,9 @@ public abstract class SpellPiece {
 	@SuppressWarnings("unchecked")
 	public <T> T getParamValue(SpellContext context, SpellParam<T> param) throws SpellRuntimeException {
 		T returnValue = (T) getRawParamValue(context, param);
-		if (returnValue instanceof Number) {
+		if(returnValue instanceof Number) {
 			Number number = (Number) returnValue;
-			if (Double.isNaN(number.doubleValue()) || Double.isInfinite(number.doubleValue())) {
+			if(Double.isNaN(number.doubleValue()) || Double.isInfinite(number.doubleValue())) {
 				throw new SpellRuntimeException(SpellRuntimeException.NAN);
 			}
 		}
@@ -197,13 +197,13 @@ public abstract class SpellPiece {
 	 */
 	public Object getRawParamValue(SpellContext context, SpellParam<?> param) {
 		SpellParam.Side side = paramSides.get(param);
-		if (!side.isEnabled()) {
+		if(!side.isEnabled()) {
 			return null;
 		}
 
 		try {
 			SpellPiece piece = spell.grid.getPieceAtSideWithRedirections(x, y, side);
-			if (piece == null || !param.canAccept(piece)) {
+			if(piece == null || !param.canAccept(piece)) {
 				return null;
 			}
 
@@ -227,7 +227,7 @@ public abstract class SpellPiece {
 	 */
 	public <T> T getNonNullParamEvaluation(SpellParam<T> param) throws SpellCompilationException {
 		T v = getParamEvaluation(param);
-		if (v == null) {
+		if(v == null) {
 			throw new SpellCompilationException(SpellCompilationException.NULL_PARAM, this.x, this.y);
 		}
 		return v;
@@ -240,13 +240,13 @@ public abstract class SpellPiece {
 	@SuppressWarnings("unchecked")
 	public <T> T getParamEvaluation(SpellParam<?> param) throws SpellCompilationException {
 		SpellParam.Side side = paramSides.get(param);
-		if (!side.isEnabled()) {
+		if(!side.isEnabled()) {
 			return null;
 		}
 
 		SpellPiece piece = spell.grid.getPieceAtSideWithRedirections(x, y, side);
 
-		if (piece == null || !param.canAccept(piece)) {
+		if(piece == null || !param.canAccept(piece)) {
 			return null;
 		}
 
@@ -258,7 +258,7 @@ public abstract class SpellPiece {
 	}
 
 	public String getSortingName() {
-		return new TranslationTextComponent(getUnlocalizedName()).getString();
+		return Component.translatable(getUnlocalizedName()).getString();
 	}
 
 	public String getUnlocalizedDesc() {
@@ -278,31 +278,38 @@ public abstract class SpellPiece {
 	 * To avoid z-fighting in the TE projection, translations are applied every step.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void draw(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
-		ms.push();
+	public void draw(PoseStack ms, MultiBufferSource buffers, int light) {
+		ms.pushPose();
 		drawBackground(ms, buffers, light);
 		ms.translate(0F, 0F, 0.1F);
 		drawAdditional(ms, buffers, light);
-		if (isInGrid) {
+		if(isInGrid) {
 			ms.translate(0F, 0F, 0.1F);
 			drawParams(ms, buffers, light);
 			ms.translate(0F, 0F, 0.1F);
 			drawComment(ms, buffers, light);
 		}
 
-		ms.pop();
+		ms.popPose();
 	}
 
 	@OnlyIn(Dist.CLIENT)
 	public static RenderType getLayer() {
-		if (layer == null) {
-			RenderType.State glState = RenderType.State.getBuilder()
-					.texture(new RenderState.TextureState(ClientPsiAPI.PSI_PIECE_TEXTURE_ATLAS, false, false))
-					.lightmap(new RenderState.LightmapState(true))
-					.alpha(new RenderState.AlphaState(0.004F))
-					.cull(new RenderState.CullState(false))
-					.build(false);
-			layer = RenderType.makeType(ClientPsiAPI.PSI_PIECE_TEXTURE_ATLAS.toString(), DefaultVertexFormats.POSITION_COLOR_TEX_LIGHTMAP, GL11.GL_QUADS, 64, glState);
+		if(layer == null) {
+			RenderType.CompositeState glState = RenderType.CompositeState.builder()
+					.setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionColorTexShader))
+					.setTextureState(new RenderStateShard.TextureStateShard(ClientPsiAPI.PSI_PIECE_TEXTURE_ATLAS, false, false))
+					.setLightmapState(new RenderStateShard.LightmapStateShard(true))
+					.setTransparencyState(new RenderStateShard.TransparencyStateShard("translucent_transparency", () -> {
+						RenderSystem.enableBlend();
+						RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+					}, () -> {
+						RenderSystem.disableBlend();
+						RenderSystem.defaultBlendFunc();
+					}))
+					.setCullState(new RenderStateShard.CullStateShard(false))
+					.createCompositeState(false);
+			layer = RenderType.create(ClientPsiAPI.PSI_PIECE_TEXTURE_ATLAS.toString(), DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 64, glState);
 		}
 		return layer;
 	}
@@ -311,26 +318,26 @@ public abstract class SpellPiece {
 	 * Draws this piece's background.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawBackground(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
-		RenderMaterial material = ClientPsiAPI.getSpellPieceMaterial(registryKey);
-		IVertexBuilder buffer = material.getBuffer(buffers, ignored -> getLayer());
-		Matrix4f mat = ms.getLast().getMatrix();
+	public void drawBackground(PoseStack ms, MultiBufferSource buffers, int light) {
+		Material material = ClientPsiAPI.getSpellPieceMaterial(registryKey);
+		VertexConsumer buffer = material.buffer(buffers, ignored -> getLayer());
+		Matrix4f mat = ms.last().pose();
 		// Cannot call .texture() on the chained object because SpriteAwareVertexBuilder is buggy
 		// and does not return itself, it returns the inner buffer
 		// This leads to .texture() using the implementation of the inner buffer,
 		// not of the SpriteAwareVertexBuilder, which is not what we want.
 		// Split the chain apart so that .texture() is called on the original buffer
-		buffer.pos(mat, 0, 16, 0).color(1F, 1F, 1F, 1F);
-		buffer.tex(0, 1).lightmap(light).endVertex();
+		buffer.vertex(mat, 0, 16, 0).color(1F, 1F, 1F, 1F);
+		buffer.uv(0, 1).uv2(light).endVertex();
 
-		buffer.pos(mat, 16, 16, 0).color(1F, 1F, 1F, 1F);
-		buffer.tex(1, 1).lightmap(light).endVertex();
+		buffer.vertex(mat, 16, 16, 0).color(1F, 1F, 1F, 1F);
+		buffer.uv(1, 1).uv2(light).endVertex();
 
-		buffer.pos(mat, 16, 0, 0).color(1F, 1F, 1F, 1F);
-		buffer.tex(1, 0).lightmap(light).endVertex();
+		buffer.vertex(mat, 16, 0, 0).color(1F, 1F, 1F, 1F);
+		buffer.uv(1, 0).uv2(light).endVertex();
 
-		buffer.pos(mat, 0, 0, 0).color(1F, 1F, 1F, 1F);
-		buffer.tex(0, 0).lightmap(light).endVertex();
+		buffer.vertex(mat, 0, 0, 0).color(1F, 1F, 1F, 1F);
+		buffer.uv(0, 0).uv2(light).endVertex();
 	}
 
 	/**
@@ -338,7 +345,7 @@ public abstract class SpellPiece {
 	 * to draw the lines.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawAdditional(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
+	public void drawAdditional(PoseStack ms, MultiBufferSource buffers, int light) {
 		// NO-OP
 	}
 
@@ -346,21 +353,21 @@ public abstract class SpellPiece {
 	 * Draws the little comment indicator in this piece, if one exists.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawComment(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
-		if (comment != null && !comment.isEmpty()) {
-			IVertexBuilder buffer = buffers.getBuffer(PsiAPI.internalHandler.getProgrammerLayer());
+	public void drawComment(PoseStack ms, MultiBufferSource buffers, int light) {
+		if(comment != null && !comment.isEmpty()) {
+			VertexConsumer buffer = buffers.getBuffer(PsiAPI.internalHandler.getProgrammerLayer());
 
 			float wh = 6F;
 			float minU = 150 / 256F;
 			float minV = 184 / 256F;
 			float maxU = (150 + wh) / 256F;
 			float maxV = (184 + wh) / 256F;
-			Matrix4f mat = ms.getLast().getMatrix();
+			Matrix4f mat = ms.last().pose();
 
-			buffer.pos(mat, -2, 4, 0).color(1F, 1F, 1F, 1F).tex(minU, maxV).lightmap(light).endVertex();
-			buffer.pos(mat, 4, 4, 0).color(1F, 1F, 1F, 1F).tex(maxU, maxV).lightmap(light).endVertex();
-			buffer.pos(mat, 4, -2, 0).color(1F, 1F, 1F, 1F).tex(maxU, minV).lightmap(light).endVertex();
-			buffer.pos(mat, -2, -2, 0).color(1F, 1F, 1F, 1F).tex(minU, minV).lightmap(light).endVertex();
+			buffer.vertex(mat, -2, 4, 0).color(1F, 1F, 1F, 1F).uv(minU, maxV).uv2(light).endVertex();
+			buffer.vertex(mat, 4, 4, 0).color(1F, 1F, 1F, 1F).uv(maxU, maxV).uv2(light).endVertex();
+			buffer.vertex(mat, 4, -2, 0).color(1F, 1F, 1F, 1F).uv(maxU, minV).uv2(light).endVertex();
+			buffer.vertex(mat, -2, -2, 0).color(1F, 1F, 1F, 1F).uv(minU, minV).uv2(light).endVertex();
 		}
 	}
 
@@ -368,41 +375,41 @@ public abstract class SpellPiece {
 	 * Draws the parameters coming into this piece.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawParams(MatrixStack ms, IRenderTypeBuffer buffers, int light) {
-		IVertexBuilder buffer = buffers.getBuffer(PsiAPI.internalHandler.getProgrammerLayer());
-		for (SpellParam<?> param : paramSides.keySet()) {
+	public void drawParams(PoseStack ms, MultiBufferSource buffers, int light) {
+		VertexConsumer buffer = buffers.getBuffer(PsiAPI.internalHandler.getProgrammerLayer());
+		for(SpellParam<?> param : paramSides.keySet()) {
 			drawParam(ms, buffer, light, param);
 		}
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void drawParam(MatrixStack ms, IVertexBuilder buffer, int light, SpellParam<?> param) {
+	public void drawParam(PoseStack ms, VertexConsumer buffer, int light, SpellParam<?> param) {
 		SpellParam.Side side = paramSides.get(param);
-		if (!side.isEnabled() || param.getArrowType() == ArrowType.NONE) {
+		if(!side.isEnabled() || param.getArrowType() == ArrowType.NONE) {
 			return;
 		}
 
 		int index = getParamArrowIndex(param);
 		int count = getParamArrowCount(side);
 		SpellPiece neighbour = spell.grid.getPieceAtSideSafely(x, y, side);
-		if (neighbour != null) {
+		if(neighbour != null) {
 			int nbcount = neighbour.getParamArrowCount(side.getOpposite());
-			if (side.asInt() > side.getOpposite().asInt()) {
+			if(side.asInt() > side.getOpposite().asInt()) {
 				index += nbcount;
 			}
 			count += nbcount;
 		}
 
 		float percent = 0.5f;
-		if (count > 1) {
+		if(count > 1) {
 			percent = (float) index / (count - 1);
 		}
 		drawParam(ms, buffer, light, side, param.color, param.getArrowType(), percent);
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void drawParam(MatrixStack ms, IVertexBuilder buffer, int light, SpellParam.Side side, int color, SpellParam.ArrowType arrowType, float percent) {
-		if (arrowType == ArrowType.NONE) {
+	public void drawParam(PoseStack ms, VertexConsumer buffer, int light, SpellParam.Side side, int color, SpellParam.ArrowType arrowType, float percent) {
+		if(arrowType == ArrowType.NONE) {
 			return;
 		}
 
@@ -411,7 +418,7 @@ public abstract class SpellPiece {
 		float maxX = minX + 8;
 		float maxY = minY + 8;
 
-		if (arrowType == ArrowType.OUT) {
+		if(arrowType == ArrowType.OUT) {
 			side = side.getOpposite();
 		}
 		float wh = 8F;
@@ -424,19 +431,19 @@ public abstract class SpellPiece {
 		int g = PsiRenderHelper.g(color);
 		int b = PsiRenderHelper.b(color);
 		int a = 255;
-		Matrix4f mat = ms.getLast().getMatrix();
+		Matrix4f mat = ms.last().pose();
 
-		buffer.pos(mat, minX, maxY, 0).color(r, g, b, a).tex(minU, maxV).lightmap(light).endVertex();
-		buffer.pos(mat, maxX, maxY, 0).color(r, g, b, a).tex(maxU, maxV).lightmap(light).endVertex();
-		buffer.pos(mat, maxX, minY, 0).color(r, g, b, a).tex(maxU, minV).lightmap(light).endVertex();
-		buffer.pos(mat, minX, minY, 0).color(r, g, b, a).tex(minU, minV).lightmap(light).endVertex();
+		buffer.vertex(mat, minX, maxY, 0).color(r, g, b, a).uv(minU, maxV).uv2(light).endVertex();
+		buffer.vertex(mat, maxX, maxY, 0).color(r, g, b, a).uv(maxU, maxV).uv2(light).endVertex();
+		buffer.vertex(mat, maxX, minY, 0).color(r, g, b, a).uv(maxU, minV).uv2(light).endVertex();
+		buffer.vertex(mat, minX, minY, 0).color(r, g, b, a).uv(minU, minV).uv2(light).endVertex();
 	}
 
 	@OnlyIn(Dist.CLIENT)
 	public int getParamArrowCount(SpellParam.Side side) {
 		int count = 0;
-		for (SpellParam<?> p : paramSides.keySet()) {
-			if (p.getArrowType() != ArrowType.NONE && paramSides.get(p) == side) {
+		for(SpellParam<?> p : paramSides.keySet()) {
+			if(p.getArrowType() != ArrowType.NONE && paramSides.get(p) == side) {
 				count++;
 			}
 		}
@@ -447,11 +454,11 @@ public abstract class SpellPiece {
 	public int getParamArrowIndex(SpellParam<?> param) {
 		SpellParam.Side side = paramSides.get(param);
 		int count = 0;
-		for (SpellParam<?> p : paramSides.keySet()) {
-			if (p == param) {
+		for(SpellParam<?> p : paramSides.keySet()) {
+			if(p == param) {
 				return count;
 			}
-			if (p.getArrowType() != ArrowType.NONE && paramSides.get(p) == side) {
+			if(p.getArrowType() != ArrowType.NONE && paramSides.get(p) == side) {
 				count++;
 			}
 		}
@@ -462,7 +469,7 @@ public abstract class SpellPiece {
 	 * Draws this piece's tooltip.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawTooltip(MatrixStack ms, int tooltipX, int tooltipY, List<ITextComponent> tooltip, Screen screen) {
+	public void drawTooltip(PoseStack ms, int tooltipX, int tooltipY, List<Component> tooltip, Screen screen) {
 		PsiAPI.internalHandler.renderTooltip(ms, tooltipX, tooltipY, tooltip, 0x505000ff, 0xf0100010, screen.width, screen.height);
 	}
 
@@ -470,48 +477,48 @@ public abstract class SpellPiece {
 	 * Draws this piece's comment tooltip.
 	 */
 	@OnlyIn(Dist.CLIENT)
-	public void drawCommentText(MatrixStack ms, int tooltipX, int tooltipY, List<ITextComponent> commentText, Screen screen) {
+	public void drawCommentText(PoseStack ms, int tooltipX, int tooltipY, List<Component> commentText, Screen screen) {
 		PsiAPI.internalHandler.renderTooltip(ms, tooltipX, tooltipY - 9 - commentText.size() * 10, commentText, 0x5000a000, 0xf0001e00, screen.width, screen.height);
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void getTooltip(List<ITextComponent> tooltip) {
-		tooltip.add(new TranslationTextComponent(getUnlocalizedName()));
-		tooltip.add(new TranslationTextComponent(getUnlocalizedDesc()).mergeStyle(TextFormatting.GRAY));
+	public void getTooltip(List<Component> tooltip) {
+		tooltip.add(Component.translatable(getUnlocalizedName()));
+		tooltip.add(Component.translatable(getUnlocalizedDesc()).withStyle(ChatFormatting.GRAY));
 		TooltipHelper.tooltipIfShift(tooltip, () -> addToTooltipAfterShift(tooltip));
-		if (!statLabels.isEmpty()) {
+		if(!statLabels.isEmpty()) {
 			TooltipHelper.tooltipIfCtrl(tooltip, () -> addToTooltipAfterCtrl(tooltip));
 		}
 
 		String addon = registryKey.getNamespace();
-		if (!addon.equals("psi")) {
+		if(!addon.equals("psi")) {
 
-			if (ModList.get().getModContainerById(addon).isPresent()) {
-				tooltip.add(new TranslationTextComponent("psimisc.provider_mod", ModList.get().getModContainerById(addon).get().getNamespace()));
+			if(ModList.get().getModContainerById(addon).isPresent()) {
+				tooltip.add(Component.translatable("psimisc.provider_mod", ModList.get().getModContainerById(addon).get().getNamespace()));
 			}
 		}
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void addToTooltipAfterShift(List<ITextComponent> tooltip) {
-		tooltip.add(new StringTextComponent(""));
-		IFormattableTextComponent eval = getEvaluationTypeString().copyRaw().mergeStyle(TextFormatting.GOLD);
-		tooltip.add(new StringTextComponent("Output ").append(eval));
+	public void addToTooltipAfterShift(List<Component> tooltip) {
+		tooltip.add(Component.literal(""));
+		MutableComponent eval = getEvaluationTypeString().plainCopy().withStyle(ChatFormatting.GOLD);
+		tooltip.add(Component.literal("Output ").append(eval));
 
-		for (SpellParam<?> param : paramSides.keySet()) {
-			ITextComponent pName = new TranslationTextComponent(param.name).mergeStyle(TextFormatting.YELLOW);
-			ITextComponent pEval = new StringTextComponent(" [").append(param.getRequiredTypeString()).appendString("]").mergeStyle(TextFormatting.YELLOW);
-			tooltip.add(new StringTextComponent(param.canDisable ? "[Input] " : " Input  ").append(pName).append(pEval));
+		for(SpellParam<?> param : paramSides.keySet()) {
+			Component pName = Component.translatable(param.name).withStyle(ChatFormatting.YELLOW);
+			Component pEval = Component.literal(" [").append(param.getRequiredTypeString()).append("]").withStyle(ChatFormatting.YELLOW);
+			tooltip.add(Component.literal(param.canDisable ? "[Input] " : " Input  ").append(pName).append(pEval));
 		}
 	}
 
 	@OnlyIn(Dist.CLIENT)
-	public void addToTooltipAfterCtrl(List<ITextComponent> tooltip) {
-		tooltip.add(new StringTextComponent(""));
+	public void addToTooltipAfterCtrl(List<Component> tooltip) {
+		tooltip.add(Component.literal(""));
 
 		statLabels.forEach((type, stat) -> {
-			tooltip.add(new TranslationTextComponent(type.getName()).appendString(":"));
-			tooltip.add(new StringTextComponent(" " + stat.toString()).mergeStyle(TextFormatting.YELLOW));
+			tooltip.add(Component.translatable(type.getName()).append(":"));
+			tooltip.add(Component.literal(" " + stat.toString()).withStyle(ChatFormatting.YELLOW));
 		});
 	}
 
@@ -549,15 +556,15 @@ public abstract class SpellPiece {
 		pieces.add(this);
 	}
 
-	public static SpellPiece createFromNBT(Spell spell, CompoundNBT cmp) {
+	public static SpellPiece createFromNBT(Spell spell, CompoundTag cmp) {
 		String key;
-		if (cmp.contains(TAG_KEY_LEGACY)) {
+		if(cmp.contains(TAG_KEY_LEGACY)) {
 			key = cmp.getString(TAG_KEY_LEGACY);
 		} else {
 			key = cmp.getString(TAG_KEY);
 		}
 
-		if (key.startsWith("_")) {
+		if(key.startsWith("_")) {
 			key = PSI_PREFIX + key.substring(1);
 		}
 		try {
@@ -567,20 +574,20 @@ public abstract class SpellPiece {
 		}
 		boolean exists = false;
 		ResourceLocation rl = new ResourceLocation(key);
-		if (PsiAPI.isPieceRegistered(rl)) {
+		if(PsiAPI.isPieceRegistered(rl)) {
 			exists = true;
 		} else {
 			Set<String> pieceNamespaces = PsiAPI.getSpellPieceRegistry().keySet().stream().map(ResourceLocation::getNamespace).collect(Collectors.toSet());
-			for (String namespace : pieceNamespaces) {
+			for(String namespace : pieceNamespaces) {
 				rl = new ResourceLocation(namespace, key);
-				if (PsiAPI.isPieceRegistered(rl)) {
+				if(PsiAPI.isPieceRegistered(rl)) {
 					exists = true;
 					break;
 				}
 			}
 		}
 
-		if (exists) {
+		if(exists) {
 			Class<? extends SpellPiece> clazz = PsiAPI.getSpellPiece(rl);
 			SpellPiece p = create(clazz, spell);
 			p.readFromNBT(cmp);
@@ -598,27 +605,27 @@ public abstract class SpellPiece {
 	}
 
 	public SpellPiece copy() {
-		CompoundNBT cmp = new CompoundNBT();
+		CompoundTag cmp = new CompoundTag();
 		writeToNBT(cmp);
 		return createFromNBT(spell, cmp);
 	}
 
 	public SpellPiece copyFromSpell(Spell spell) {
-		CompoundNBT cmp = new CompoundNBT();
+		CompoundTag cmp = new CompoundTag();
 		writeToNBT(cmp);
 		return createFromNBT(spell, cmp);
 	}
 
-	public void readFromNBT(CompoundNBT cmp) {
-		CompoundNBT paramCmp = cmp.getCompound(TAG_PARAMS);
-		for (String s : params.keySet()) {
+	public void readFromNBT(CompoundTag cmp) {
+		CompoundTag paramCmp = cmp.getCompound(TAG_PARAMS);
+		for(String s : params.keySet()) {
 			SpellParam<?> param = params.get(s);
 
 			String key = s;
-			if (paramCmp.contains(key)) {
+			if(paramCmp.contains(key)) {
 				paramSides.put(param, SpellParam.Side.fromInt(paramCmp.getInt(key)));
 			} else {
-				if (key.startsWith(SpellParam.PSI_PREFIX)) {
+				if(key.startsWith(SpellParam.PSI_PREFIX)) {
 					key = "_" + key.substring(SpellParam.PSI_PREFIX.length());
 				}
 				paramSides.put(param, SpellParam.Side.fromInt(paramCmp.getInt(key)));
@@ -628,26 +635,26 @@ public abstract class SpellPiece {
 		comment = cmp.getString(TAG_COMMENT);
 	}
 
-	public void writeToNBT(CompoundNBT cmp) {
-		if (comment == null) {
+	public void writeToNBT(CompoundTag cmp) {
+		if(comment == null) {
 			comment = "";
 		}
 
 		cmp.putString(TAG_KEY, registryKey.toString().replaceAll("^" + PSI_PREFIX, "_"));
 
 		int paramCount = 0;
-		CompoundNBT paramCmp = new CompoundNBT();
-		for (String s : params.keySet()) {
+		CompoundTag paramCmp = new CompoundTag();
+		for(String s : params.keySet()) {
 			SpellParam<?> param = params.get(s);
 			SpellParam.Side side = paramSides.get(param);
 			paramCmp.putInt(s.replaceAll("^" + SpellParam.PSI_PREFIX, "_"), side.asInt());
 			paramCount++;
 		}
 
-		if (paramCount > 0) {
+		if(paramCount > 0) {
 			cmp.put(TAG_PARAMS, paramCmp);
 		}
-		if (!comment.isEmpty()) {
+		if(!comment.isEmpty()) {
 			cmp.putString(TAG_COMMENT, comment);
 		}
 	}

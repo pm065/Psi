@@ -42,7 +42,7 @@ public class PieceTrickEidosAnchor extends PieceTrick {
 		super.addToMetadata(meta);
 		Double timeVal = this.<Double>getParamEvaluation(time);
 
-		if (timeVal == null || timeVal <= 0 || timeVal != timeVal.intValue()) {
+		if(timeVal == null || timeVal <= 0 || timeVal != timeVal.intValue()) {
 			throw new SpellCompilationException(SpellCompilationException.NON_POSITIVE_INTEGER, x, y);
 		}
 
@@ -55,8 +55,8 @@ public class PieceTrickEidosAnchor extends PieceTrick {
 		int timeVal = this.getParamValue(context, time).intValue();
 		PlayerData data = PlayerDataHandler.get(context.caster);
 		data.eidosAnchor = Vector3.fromEntity(context.caster);
-		data.eidosAnchorPitch = context.caster.rotationPitch;
-		data.eidosAnchorYaw = context.caster.rotationYaw;
+		data.eidosAnchorPitch = context.caster.getXRot();
+		data.eidosAnchorYaw = context.caster.getYRot();
 		data.eidosAnchorTime = timeVal * 20;
 		data.postAnchorRecallTime = 0;
 		data.isAnchored = true;

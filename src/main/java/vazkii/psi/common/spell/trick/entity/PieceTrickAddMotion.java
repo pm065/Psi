@@ -8,7 +8,7 @@
  */
 package vazkii.psi.common.spell.trick.entity;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 
 import vazkii.psi.api.internal.Vector3;
 import vazkii.psi.api.spell.EnumSpellStat;
@@ -50,13 +50,13 @@ public class PieceTrickAddMotion extends PieceTrick {
 	public void addToMetadata(SpellMetadata meta) throws SpellCompilationException {
 		super.addToMetadata(meta);
 		Double speedVal = this.<Double>getParamEvaluation(speed);
-		if (speedVal == null) {
+		if(speedVal == null) {
 			speedVal = 1D;
 		}
 
 		double absSpeed = Math.abs(speedVal);
 		int dc = 0;
-		if (!meta.getFlag("psi.addmotion")) {
+		if(!meta.getFlag("psi.addmotion")) {
 			meta.setFlag("psi.addmotion", true);
 			dc = 3;
 		}
@@ -77,19 +77,19 @@ public class PieceTrickAddMotion extends PieceTrick {
 
 	public static void addMotion(SpellContext context, Entity e, Vector3 dir, double speed) throws SpellRuntimeException {
 		context.verifyEntity(e);
-		if (!context.isInRadius(e)) {
+		if(!context.isInRadius(e)) {
 			throw new SpellRuntimeException(SpellRuntimeException.OUTSIDE_RADIUS);
 		}
 
 		dir = dir.copy().normalize().multiply(MULTIPLIER * speed);
 
-		if (Math.abs(dir.y) > 0.0001) {
-			if (e.getMotion().getY() + dir.y >= 0) {
+		if(Math.abs(dir.y) > 0.0001) {
+			if(e.getDeltaMovement().y() + dir.y >= 0) {
 				e.fallDistance = 0;
-			} else if (dir.y > 0) {
+			} else if(dir.y > 0) {
 				double magicnumber = 25d / 98d; // Equal to 1/terminal velocity of living entity
-				double yvel = (e.getMotion().getY() + dir.y) * magicnumber + 1; // inverse % of terminal velocity
-				if (yvel > 0) {
+				double yvel = (e.getDeltaMovement().y() + dir.y) * magicnumber + 1; // inverse % of terminal velocity
+				if(yvel > 0) {
 					float newfall = (float) (-(49 / magicnumber) + (((49 * yvel) - (Math.log(yvel) / Math.log(4 * magicnumber))) / magicnumber));
 					e.fallDistance = Math.min(e.fallDistance, Math.max(0, newfall));
 				}
